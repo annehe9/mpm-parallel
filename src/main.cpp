@@ -183,37 +183,41 @@ void P2G(void)
 	}
 }
 
-void UpdateGridVelocity_iteration(int i, int j) {
-        auto& g = grid[i][j];
-        // No need for epsilon here
-        if (g[2] > 0) {
-                // Normalize by mass
-                g /= g[2];
-                // Gravity
-                g += DT * Vector3d(0, -200, 0);
+void UpdateGridVelocity_iteration(Vector3d g, int i, int j) {
+        // Normalize by mass
+        g /= g[2];
+        // Gravity
+        g += DT * Vector3d(0, -200, 0);
 
-                // boundary thickness
-                double boundary = 0.05;
-                // Node coordinates
-                double x = (double)i / GRID_RES;
-                double y = (double)j / GRID_RES;
+        // boundary thickness
+        double boundary = 0.05;
+        // Node coordinates
+        double x = (double)i / GRID_RES;
+        double y = (double)j / GRID_RES;
 
-                // Sticky boundary
-                if (x < boundary || x > 1 - boundary) { 
-                        g[0] = 0.0;
-                }
-                // Separate boundary
-                if (y < boundary || y > 1 - boundary) {
-                        g[1] = 0.0;
-                }
+        // Sticky boundary
+        if (x < boundary || x > 1 - boundary) { 
+                g[0] = 0.0;
+        }
+        // Separate boundary
+        if (y < boundary || y > 1 - boundary) {
+                g[1] = 0.0;
         }
 }
 
 void UpdateGridVelocity(void) {
-        #pragma omp parallel for collapse(2) // private(i, j) schedule(dynamic) 
-	for (int i = 0; i < GRID_RES; i++) {
-		for (int j = 0; j < GRID_RES; j++) {
-                        UpdateGridVelocity_iteration(i, j);
+        int i, j;
+        // TODO: Does not appear omp is useful here, but if must use, static
+        // is better than dynamic scheduling.
+        // Consider that only some of the iterations actually have work.
+        // Most others are just a check.
+        //#pragma omp parallel for collapse(2) private(i, j) //schedule(dynamic)
+        for (i = 0; i < GRID_RES; i++) {
+                for (j = 0; j < GRID_RES; j++) {
+                        Vector3d &g = grid[i][j];
+                        if (g[2] > 0) {
+                                UpdateGridVelocity_iteration(g, i, j);
+                        }
 		}
 	}
 }
