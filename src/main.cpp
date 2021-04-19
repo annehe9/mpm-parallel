@@ -1,13 +1,10 @@
 #if __APPLE__
 #include <GLUT/glut.h>
-#elif __linux__
-#include <GL/glut.h>
 #else
-#include <windows.h>
+//#include <windows.h>
 #include <GL/glut.h>
 #endif
 
-#include <time.h>
 #include <iostream>
 #include <vector>
 #include <cstring>
@@ -21,6 +18,8 @@ using namespace Eigen;
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+int iteration = 0;
 
 // References:
 // https://github.com/yuanming-hu/taichi_mpm/blob/master/mls-mpm88-explained.cpp
@@ -166,8 +165,8 @@ void P2G(void)
 
 void UpdateGridVelocity(void) {
 	// For all grid nodes
-	for (int i = 0; i <= GRID_RES; i++) {
-		for (int j = 0; j <= GRID_RES; j++) {
+	for (int i = 0; i < GRID_RES; i++) {
+		for (int j = 0; j < GRID_RES; j++) {
 			auto& g = grid[i][j];
 			// No need for epsilon here
 			if (g[2] > 0) {
@@ -263,27 +262,15 @@ void G2P(void)
 	}
 }
 
-double get_ms(struct timespec t) {
-        return t.tv_sec * 1000.0 + t.tv_nsec / 1000000.0;
-}
-
 void Update(void)
 {
-        struct timespec t1, t2, t3, t4;
-        clock_gettime(CLOCK_REALTIME, &t1);
 	P2G();
-        clock_gettime(CLOCK_REALTIME, &t2);
 	UpdateGridVelocity();
-        clock_gettime(CLOCK_REALTIME, &t3);
 	G2P();
-        clock_gettime(CLOCK_REALTIME, &t4);
-        printf("Total: %.3f\nP2G: %.3f\tUpdate: %.3f\tG2P: %.3f\n",
-                get_ms(t4) - get_ms(t1),
-                get_ms(t2) - get_ms(t1),
-                get_ms(t3) - get_ms(t2),
-                get_ms(t4) - get_ms(t3)
-        );
 	glutPostRedisplay();
+
+        printf("Iteration: %d\n", iteration);
+        iteration += 1;
 }
 
 
