@@ -379,6 +379,9 @@ int main(int argc, char** argv)
         NCORES = atoi(argv[1]);
         printf("NCORES: %d\tMAX_NTHREADS: %d\n", NCORES, MAX_NTHREADS);
         omp_set_num_threads(NCORES);
+        // Eigen
+        Eigen::initParallel();
+        //Eigen::setNbThreads(n);
 
 	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
 	glutInit(&argc, argv);
