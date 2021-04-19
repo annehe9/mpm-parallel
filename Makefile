@@ -22,7 +22,10 @@ CC = g++
 LD = g++
 OBJDIR = obj
 SRCDIR = src
-CFLAGS = -std=c++11 -O3 -Wall -Wno-deprecated -pedantic -Wno-vla-extension $(INCLUDE_PATH) -I./include -I./$(SRCDIR) -DNDEBUG
+
+CFLAGS = -std=c++11 -pedantic -Wno-deprecated -Wall -Wextra -O3 -DNDEBUG
+CFLAGS += $(INCLUDE_PATH) -I./include -I./$(SRCDIR)
+OMP = -fopenmp
 LFLAGS = -std=c++11 -O3 -Wall -Wno-deprecated -Werror -pedantic $(LIBRARY_PATH) -DNDEBUG
 LIBS = $(OPENGL_LIBS)
 
@@ -33,11 +36,11 @@ default: $(TARGET)
 all: clean $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(LD) $(LFLAGS) $(OBJS) $(LIBS) -o $(TARGET)
+	$(LD) $(OMP) $(LFLAGS) $(OBJS) $(LIBS) -o $(TARGET)
 
 $(OBJDIR)/main.o: $(SRCDIR)/main.cpp
 	mkdir -p $(OBJDIR)
-	$(CC) $(CFLAGS) -c $(SRCDIR)/main.cpp -o $(OBJDIR)/main.o
+	$(CC) $(OMP) $(CFLAGS) -c $(SRCDIR)/main.cpp -o $(OBJDIR)/main.o
 
 clean:
 	rm -f $(OBJS)

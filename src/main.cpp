@@ -20,6 +20,12 @@ using namespace Eigen;
 #define M_PI 3.14159265358979323846
 #endif
 
+#include <pthread.h>
+#include <omp.h>
+
+int NCORES = omp_get_num_procs();
+int MAX_NTHREADS = omp_get_max_threads();
+
 int iteration = 0;
 
 // References:
@@ -96,175 +102,198 @@ void InitMPM(void)
 	addParticles(0.55, 0.85);
 }
 
+void P2G_iteration(Particle p) {
+
+        JacobiSVD<Matrix2d> svd; 
+        Matrix2d r, PF_0, PF_1, PF, stress, affine;
+        Vector3d mass_x_velocity;
+        Vector2i base_coord;
+        Vector2d fx, tmpa, tmpb, tmpc, dpos, tmp, w[3];
+        Vector2d onehalf(1.5, 1.5); //have to make these so eigen doesn't give me errors
+        Vector2d one(1.0, 1.0);
+        Vector2d half(0.5, 0.5);
+        Vector2d threequarters(0.75, 0.75);
+        double e, mu, lambda, J, Dinv, pf1tmp;
+        int i, j;
+
+        base_coord = (p.x * INV_DX - half).cast<int>();
+        fx = p.x * INV_DX - base_coord.cast<double>();
+
+        // Quadratic kernels [https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf Eqn. 123, with x=fx, fx-1,fx-2]
+        tmpa = onehalf - fx;
+        tmpb = fx - one;
+        tmpc = fx - half;
+        w[0] = 0.5 * (tmpa.cwiseProduct(tmpa));
+        w[1] = threequarters - (tmpb.cwiseProduct(tmpb));
+        w[2] = 0.5 * (tmpc.cwiseProduct(tmpc));
+
+        // Snow
+        // Compute current Lamé parameters [https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf Eqn. 87]
+        e = exp(HARD * (1.0 - p.Jp));
+        mu = MU_0 * e;
+        lambda = LAMBDA_0 * e;
+
+        // Current volume
+        J = p.F.determinant();
+
+        // Polar decomposition for fixed corotated model
+        svd = JacobiSVD<Matrix2d>(p.F, ComputeFullU | ComputeFullV);
+        r = svd.matrixU() * svd.matrixV().transpose();
+        //Matrix2d s = svd.matrixV() * svd.singularValues().asDiagonal() * svd.matrixV().transpose();
+
+        // [http://mpm.graphics Paragraph after Eqn. 176]
+        Dinv = 4 * INV_DX * INV_DX;
+        // [http://mpm.graphics Eqn. 52]
+        PF_0 = (2 * mu) * (p.F - r) * p.F.transpose();
+        pf1tmp = (lambda * (J - 1) * J);
+        PF_1 << pf1tmp, pf1tmp, 
+                        pf1tmp, pf1tmp;
+        PF = PF_0 + PF_1;
+
+        // Cauchy stress times dt and inv_dx
+        stress = -(DT * VOL) * (Dinv * PF);
+
+        // Fused APIC momentum + MLS-MPM stress contribution
+        // See https://yzhu.io/publication/mpmmls2018siggraph/paper.pdf
+        // Eqn 29
+        affine = stress + MASS * p.C;
+
+        // P2G
+        for (i = 0; i < 3; i++) {
+                for (j = 0; j < 3; j++) {
+                        dpos = (Vector2d(i, j) - fx) * DX;
+                        // Translational momentum
+                        mass_x_velocity = Vector3d(p.v.x() * MASS, p.v.y() * MASS, MASS);
+                        tmp = affine * dpos;
+                        grid[base_coord.x() + i][base_coord.y() + j] += (
+                                w[i].x() * w[j].y() * (mass_x_velocity + Vector3d(tmp.x(), tmp.y(), 0))
+                                );
+                }
+        }
+}
+
 void P2G(void)
 {
 	memset(grid, 0, sizeof(grid));
-	for (Particle &p : particles) {
-		Vector2i base_coord = (p.x * INV_DX - Vector2d(0.5, 0.5)).cast<int>();
-		Vector2d fx = p.x * INV_DX - base_coord.cast<double>();
 
-		// Quadratic kernels [https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf Eqn. 123, with x=fx, fx-1,fx-2]
-		Vector2d onehalf(1.5, 1.5); //have to make these so eigen doesn't give me errors
-		Vector2d one(1.0, 1.0);
-		Vector2d half(0.5, 0.5);
-		Vector2d threequarters(0.75, 0.75);
-		Vector2d tmpa = onehalf - fx;
-		Vector2d tmpb = fx - one;
-		Vector2d tmpc = fx - half;
-		Vector2d w[3] = {
-		  0.5 * (tmpa.cwiseProduct(tmpa)),
-		  threequarters - (tmpb.cwiseProduct(tmpb)),
-		  0.5 * (tmpc.cwiseProduct(tmpc))
-		};
+        size_t i;
+        #pragma omp parallel for schedule(dynamic) private(i)
+	for (i = 0; i < particles.size(); i++) {//(Particle &p : particles) {
+                P2G_iteration(particles[i]);
+	}
+}
 
-		// Snow
-		// Compute current Lamé parameters [https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf Eqn. 87]
-		double e = exp(HARD * (1.0 - p.Jp));
-		double mu = MU_0 * e;
-		double lambda = LAMBDA_0 * e;
+void UpdateGridVelocity_iteration(int i, int j) {
+        auto& g = grid[i][j];
+        // No need for epsilon here
+        if (g[2] > 0) {
+                // Normalize by mass
+                g /= g[2];
+                // Gravity
+                g += DT * Vector3d(0, -200, 0);
 
-		// Current volume
-		double J = p.F.determinant();
+                // boundary thickness
+                double boundary = 0.05;
+                // Node coordinates
+                double x = (double)i / GRID_RES;
+                double y = (double)j / GRID_RES;
 
-		// Polar decomposition for fixed corotated model
-		JacobiSVD<Matrix2d> svd(p.F, ComputeFullU | ComputeFullV);
-		Matrix2d r = svd.matrixU() * svd.matrixV().transpose();
-		//Matrix2d s = svd.matrixV() * svd.singularValues().asDiagonal() * svd.matrixV().transpose();
+                // Sticky boundary
+                if (x < boundary || x > 1 - boundary) { 
+                        g[0] = 0.0;
+                }
+                // Separate boundary
+                if (y < boundary || y > 1 - boundary) {
+                        g[1] = 0.0;
+                }
+        }
+}
 
-		// [http://mpm.graphics Paragraph after Eqn. 176]
-		double Dinv = 4 * INV_DX * INV_DX;
-		// [http://mpm.graphics Eqn. 52]
-		Matrix2d PF_0 = (2 * mu) * (p.F - r) * p.F.transpose();
-		double pf1tmp= (lambda * (J - 1) * J);
-		Matrix2d PF_1;
-		PF_1 << pf1tmp, pf1tmp, 
-				pf1tmp, pf1tmp;
-		Matrix2d PF = PF_0 + PF_1;
-
-		// Cauchy stress times dt and inv_dx
-		Matrix2d stress = -(DT * VOL) * (Dinv * PF);
-
-		// Fused APIC momentum + MLS-MPM stress contribution
-		// See https://yzhu.io/publication/mpmmls2018siggraph/paper.pdf
-		// Eqn 29
-		Matrix2d affine = stress + MASS * p.C;
-
-		// P2G
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 3; j++) {
-				Vector2d dpos = (Vector2d(i, j) - fx) * DX;
-				// Translational momentum
-				Vector3d mass_x_velocity(p.v.x() * MASS, p.v.y() * MASS, MASS);
-				Vector2d tmp = affine * dpos;
-				grid[base_coord.x() + i][base_coord.y() + j] += (
-					w[i].x() * w[j].y() * (mass_x_velocity + Vector3d(tmp.x(), tmp.y(), 0))
-					);
-			}
+void UpdateGridVelocity(void) {
+        #pragma omp parallel for collapse(2) // private(i, j) schedule(dynamic) 
+	for (int i = 0; i < GRID_RES; i++) {
+		for (int j = 0; j < GRID_RES; j++) {
+                        UpdateGridVelocity_iteration(i, j);
 		}
 	}
 }
 
-void UpdateGridVelocity(void) {
-	// For all grid nodes
-	for (int i = 0; i < GRID_RES; i++) {
-		for (int j = 0; j < GRID_RES; j++) {
-			auto& g = grid[i][j];
-			// No need for epsilon here
-			if (g[2] > 0) {
-				// Normalize by mass
-				g /= g[2];
-				// Gravity
-				g += DT * Vector3d(0, -200, 0);
+void G2P_iteration(Particle p) {
+        // element-wise floor
+        Vector2i base_coord = (p.x * INV_DX - Vector2d(0.5, 0.5)).cast<int>();
+        Vector2d fx = p.x * INV_DX - base_coord.cast<double>();
 
-				// boundary thickness
-				double boundary = 0.05;
-				// Node coordinates
-				double x = (double)i / GRID_RES;
-				double y = (double)j / GRID_RES;
+        // Quadratic kernels [https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf Eqn. 123, with x=fx, fx-1,fx-2]
+        Vector2d onehalf(1.5, 1.5); //have to make these so eigen doesn't give me errors
+        Vector2d one(1.0, 1.0);
+        Vector2d half(0.5, 0.5);
+        Vector2d threequarters(0.75, 0.75);
+        Vector2d tmpa = onehalf - fx;
+        Vector2d tmpb = fx - one;
+        Vector2d tmpc = fx - half;
+        Vector2d w[3] = {
+          0.5 * (tmpa.cwiseProduct(tmpa)),
+          threequarters - (tmpb.cwiseProduct(tmpb)),
+          0.5 * (tmpc.cwiseProduct(tmpc))
+        };
 
-				// Sticky boundary
-				if (x < boundary || x > 1 - boundary) { 
-					g[0] = 0.0;
-				}
-				// Separate boundary
-				if (y < boundary || y > 1 - boundary) {
-					g[1] = 0.0;
-				}
-			}
-		}
-	}
+        p.C = Matrix2d::Zero();
+        p.v = Vector2d::Zero();
+
+        // constructing affine per-particle momentum matrix from APIC / MLS-MPM.
+        // see APIC paper (https://www.math.ucla.edu/~jteran/papers/JSSTS15.pdf), page 6
+        // below equation 11 for clarification. this is calculating C = B * (D^-1) for APIC equation 8,
+        // where B is calculated in the inner loop at (D^-1) = 4 is a constant when using quadratic interpolation functions
+        for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                        Vector2d dpos = (Vector2d(i, j) - fx);
+                        Vector3d curr = grid[base_coord.x() + i][base_coord.y() + j];
+                        Vector2d grid_v(curr.x(), curr.y());
+                        double weight = w[i].x() * w[j].y();
+                        // Velocity
+                        p.v += weight * grid_v;
+                        // APIC C, outer product of weighted velocity and dist, paper equation 10
+                        p.C += 4 * INV_DX * ((weight * grid_v) * dpos.transpose());
+                }
+        }
+
+        // Advection
+        //double tempy = p.x.y();
+        p.x += DT * p.v;
+        //cout << "change" << tempy - p.x.y() << endl;
+        //cout << "velocity " <<  p.v << endl;
+
+        // MLS-MPM F-update eqn 17
+        Matrix2d F = (Matrix2d::Identity() + DT * p.C) * p.F;
+
+        JacobiSVD<Matrix2d> svd(F, ComputeFullU | ComputeFullV);
+        Matrix2d svd_u = svd.matrixU();
+        Matrix2d svd_v = svd.matrixV();
+        Matrix2d sig = svd.singularValues().asDiagonal();
+
+        // Snow Plasticity
+        sig = sig.array().min(1.0f + 7.5e-3).max(1.0 - 2.5e-2);
+
+        double oldJ = F.determinant();
+        F = svd_u * sig * svd_v.transpose();
+
+        double Jp_new = min(max(p.Jp * oldJ / F.determinant(), 0.6), 20.0);
+
+        p.Jp = Jp_new;
+        p.F = F;
 }
 
 void G2P(void)
 {
-	for (Particle &p : particles) {
-		// element-wise floor
-		Vector2i base_coord = (p.x * INV_DX - Vector2d(0.5, 0.5)).cast<int>();
-		Vector2d fx = p.x * INV_DX - base_coord.cast<double>();
-
-		// Quadratic kernels [https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf Eqn. 123, with x=fx, fx-1,fx-2]
-		Vector2d onehalf(1.5, 1.5); //have to make these so eigen doesn't give me errors
-		Vector2d one(1.0, 1.0);
-		Vector2d half(0.5, 0.5);
-		Vector2d threequarters(0.75, 0.75);
-		Vector2d tmpa = onehalf - fx;
-		Vector2d tmpb = fx - one;
-		Vector2d tmpc = fx - half;
-		Vector2d w[3] = {
-		  0.5 * (tmpa.cwiseProduct(tmpa)),
-		  threequarters - (tmpb.cwiseProduct(tmpb)),
-		  0.5 * (tmpc.cwiseProduct(tmpc))
-		};
-
-		p.C = Matrix2d::Zero();
-		p.v = Vector2d::Zero();
-
-		// constructing affine per-particle momentum matrix from APIC / MLS-MPM.
-		// see APIC paper (https://www.math.ucla.edu/~jteran/papers/JSSTS15.pdf), page 6
-		// below equation 11 for clarification. this is calculating C = B * (D^-1) for APIC equation 8,
-		// where B is calculated in the inner loop at (D^-1) = 4 is a constant when using quadratic interpolation functions
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 3; j++) {
-				Vector2d dpos = (Vector2d(i, j) - fx);
-				Vector3d curr = grid[base_coord.x() + i][base_coord.y() + j];
-				Vector2d grid_v(curr.x(), curr.y());
-				double weight = w[i].x() * w[j].y();
-				// Velocity
-				p.v += weight * grid_v;
-				// APIC C, outer product of weighted velocity and dist, paper equation 10
-				p.C += 4 * INV_DX * ((weight * grid_v) * dpos.transpose());
-			}
-		}
-
-		// Advection
-		//double tempy = p.x.y();
-		p.x += DT * p.v;
-		//cout << "change" << tempy - p.x.y() << endl;
-		//cout << "velocity " <<  p.v << endl;
-
-		// MLS-MPM F-update eqn 17
-		Matrix2d F = (Matrix2d::Identity() + DT * p.C) * p.F;
-
-		JacobiSVD<Matrix2d> svd(F, ComputeFullU | ComputeFullV);
-		Matrix2d svd_u = svd.matrixU();
-		Matrix2d svd_v = svd.matrixV();
-		Matrix2d sig = svd.singularValues().asDiagonal();
-
-		// Snow Plasticity
-		sig = sig.array().min(1.0f + 7.5e-3).max(1.0 - 2.5e-2);
-
-		double oldJ = F.determinant();
-		F = svd_u * sig * svd_v.transpose();
-
-		double Jp_new = min(max(p.Jp * oldJ / F.determinant(), 0.6), 20.0);
-
-		p.Jp = Jp_new;
-		p.F = F;
+        size_t i;
+        #pragma omp parallel for schedule(dynamic) private(i)
+	for (i = 0; i < particles.size(); i++) {//(Particle &p : particles) {
+                G2P_iteration(particles[i]);
 	}
 }
 
 double get_ms(struct timespec t) {
-                return t.tv_sec * 1000.0 + t.tv_nsec / 1000000.0;
+        return t.tv_sec * 1000.0 + t.tv_nsec / 1000000.0;
 }
 
 void Update(void)
@@ -338,6 +367,15 @@ void Keyboard(unsigned char c, __attribute__((unused)) int x, __attribute__((unu
 
 int main(int argc, char** argv)
 {
+        // OpenMP
+        if (argc < 2) {
+                printf("Input # of cores.");
+                exit(-1);
+        }
+        NCORES = atoi(argv[1]);
+        printf("NCORES: %d\tMAX_NTHREADS: %d\n", NCORES, MAX_NTHREADS);
+        omp_set_num_threads(NCORES);
+
 	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
 	glutInit(&argc, argv);
 	glutCreateWindow("MPM");
