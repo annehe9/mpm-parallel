@@ -16,10 +16,17 @@ using namespace std;
 #include <eigen3/Eigen/Dense>
 using namespace Eigen;
 
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <driver_functions.h>
+#include "cudaMPM.h"
+
+#define BLOCKSIDE 32
+#define BLOCKSIZE ((BLOCKSIDE) * (BLOCKSIDE))
+
+
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
-
-#include "cudaMPM.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -29,69 +36,41 @@ using namespace Eigen;
 // https://github.com/yuanming-hu/taichi_mpm/blob/master/mls-mpm88-explained.cpp
 // https://lucasschuermann.com/writing/implementing-sph-in-2d for visualization
 
-// Particle representation
-struct Particle
-{
-	Particle(double _x, double _y) : x(_x, _y), v(0.0, 0.0), F(Matrix2d::Identity()), C(Matrix2d::Zero()), Jp(1.0) {}
-	Vector2d x, v; //position and velocity
-	Matrix2d F, C; //deformation gradient, APIC momentum
-	double Jp; //determinant of deformation gradient, which is volume
-};
-
-// Grid representation
-/*
-struct Cell
-{
-	Cell() : v(0.f, 0.f), mass(0.f) {}
-	Vector2f v;
-	double mass;
-
-};
-*/
-
 // Granularity
-const static int MAX_PARTICLES = 25000;
-const static int BLOCK_PARTICLES = 1000;		// number of particles added in a block
-int NUM_PARTICLES = 0;					// keeps track of current number of particles
-const static int GRID_RES = 80;				// grid dim of one side
-const static int NUM_CELLS = GRID_RES * GRID_RES;	// number of cells in the grid
-const static double DT = 0.00001;			// integration timestep
-const static double DX = 1.0 / GRID_RES;
-const static double INV_DX = 1.0 / DX;
-
-// Data structures
-static vector<Particle> particles;
-// Vector3: [velocity_x, velocity_y, mass]
-static Vector3d grid[GRID_RES + 1][GRID_RES + 1];
-//static Cell grid[GRID_RES][GRID_RES];
+__constant__ int MAX_PARTICLES = 25000;
+__constant__ int BLOCK_PARTICLES = 1000;		// number of particles added in a block
+__constant__ int GRID_RES = 80;				// grid dim of one side
+__constant__ int NUM_CELLS = GRID_RES * GRID_RES;	// number of cells in the grid
+__constant__ double DT = 0.00001;			// integration timestep
+__constant__ double DX = 1.0 / GRID_RES;
+__constant__ double INV_DX = 1.0 / DX;
 
 // Simulation params
-const static double MASS = 1.0;					// mass of one particle
-const static double VOL = 1.0;					// volume of one particle
-const static double HARD = 10.0;					// snow hardening factor
-const static double E = 10000;				// Young's Modulus, resistance to fracture
-const static double NU = 0.2;					// Poisson ratio
+__constant__ double MASS = 1.0;					// mass of one particle
+__constant__ double VOL = 1.0;					// volume of one particle
+__constant__ double HARD = 10.0;					// snow hardening factor
+__constant__ double E = 10000;				// Young's Modulus, resistance to fracture
+__constant__ double NU = 0.2;					// Poisson ratio
 
 // Initial Lame params
-const static double MU_0 = E / (2 * (1 + NU));
-const static double LAMBDA_0 = (E * NU) / ((1 + NU) * (1 - 2 * NU));
+__constant__ double MU_0 = E / (2 * (1 + NU));
+__constant__ double LAMBDA_0 = (E * NU) / ((1 + NU) * (1 - 2 * NU));
 
-// Render params
-const static int WINDOW_WIDTH = 800;
-const static int WINDOW_HEIGHT = 600;
-//const static double VIEW_WIDTH = 1.5 * 800;
-//const static double VIEW_HEIGHT = 1.5 * 600;
+// Params we need outside of kernels or that need to be modified
+struct GlobalConstants {
+	int NUM_PARTICLES = 0;					// keeps track of current number of particles
+	// Data structures
+	vector<Particle> particles;
+	// Vector3: [velocity_x, velocity_y, mass]
+	Vector3d grid[GRID_RES + 1][GRID_RES + 1];
+};
 
-// Image output params
-static int frame = 0;	// current image
-static int step = 0;	// current simulation step
-const static int FPS = 500; // fps of output video
-const static int INV_FPS = (1.0 / DT) / FPS;
+GlobalConstants params;
 
-cudaMPM* solver;
+__constant__ GlobalConstants cuConstParams;
 
 // yay add more particles randomly in a square
-void addParticles(double xcenter, double ycenter)
+void cudaMPM::addParticles(double xcenter, double ycenter)
 {
 	for (int i = 0; i < BLOCK_PARTICLES; i++) {
 		particles.push_back(Particle((((double)rand() / (double)RAND_MAX) * 2 - 1) * 0.08 + xcenter, (((double)rand() / (double)RAND_MAX) * 2 - 1) * 0.08 + ycenter));
@@ -99,20 +78,12 @@ void addParticles(double xcenter, double ycenter)
 	NUM_PARTICLES += BLOCK_PARTICLES;
 }
 
-void InitMPM(void)
+__global__ void P2G(void)
 {
-	cout << "initializing mpm with " << BLOCK_PARTICLES << " particles" << endl;
-	addParticles(0.55, 0.45);
-	addParticles(0.45, 0.65);
-	addParticles(0.55, 0.85);
-	solver = new cudaMPM();
-	solver->setup();
-}
-
-void P2G(void)
-{
-	memset(grid, 0, sizeof(grid));
-	for (Particle& p : particles) {
+	int iterations = (NUM_PARTICLES + BLOCKSIZE - 1) / BLOCKSIZE;
+	for (int i = 0; i < iterations; i++) {
+		int index = blockIdx.x * blockDim.x + threadId.x + i;
+		const Particle& p = cuConstParams.particles[index];
 		Vector2i base_coord = (p.x * INV_DX - Vector2d(0.5, 0.5)).cast<int>();
 		Vector2d fx = p.x * INV_DX - base_coord.cast<double>();
 
@@ -163,6 +134,8 @@ void P2G(void)
 		Matrix2d affine = stress + MASS * p.C;
 
 		// P2G
+		// must read surrounding 9 grids which may be in different blocks, but this is fine
+		// we don't need shared mem of grid because we are only reading and not modifying grid
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < 3; j++) {
 				Vector2d dpos = (Vector2d(i, j) - fx) * DX;
@@ -177,40 +150,43 @@ void P2G(void)
 	}
 }
 
-void UpdateGridVelocity(void) {
-	// For all grid nodes
-	for (int i = 0; i <= GRID_RES; i++) {
-		for (int j = 0; j <= GRID_RES; j++) {
-			auto& g = grid[i][j];
-			// No need for epsilon here
-			if (g[2] > 0) {
-				// Normalize by mass
-				g /= g[2];
-				// Gravity
-				g += DT * Vector3d(0, -200, 0);
+__global__ void UpdateGridVelocity(void) {
+	int iterations = (NUM_CELLS + BLOCKSIZE - 1) / BLOCKSIZE;
+	for (int i = 0; i < iterations; i++) {
+		int index = blockIdx.x * blockDim.x + threadId.x + i;
+		int i = index / GRID_RES;
+		int j = index % GRID_RES;
+		Vector3d& g = grid[i][j];
+		if (g[2] > 0) {
+			// Normalize by mass
+			g /= g[2];
+			// Gravity
+			g += DT * Vector3d(0, -200, 0);
 
-				// boundary thickness
-				double boundary = 0.05;
-				// Node coordinates
-				double x = (double)i / GRID_RES;
-				double y = (double)j / GRID_RES;
+			// boundary thickness
+			double boundary = 0.05;
+			// Node coordinates
+			double x = (double)i / GRID_RES;
+			double y = (double)j / GRID_RES;
 
-				// Sticky boundary
-				if (x < boundary || x > 1 - boundary) {
-					g[0] = 0.0;
-				}
-				// Separate boundary
-				if (y < boundary || y > 1 - boundary) {
-					g[1] = 0.0;
-				}
+			// Sticky boundary
+			if (x < boundary || x > 1 - boundary) {
+				g[0] = 0.0;
+			}
+			// Separate boundary
+			if (y < boundary || y > 1 - boundary) {
+				g[1] = 0.0;
 			}
 		}
 	}
 }
 
-void G2P(void)
+__global__ void G2P(void)
 {
-	for (Particle& p : particles) {
+	int iterations = (NUM_PARTICLES + BLOCKSIZE - 1) / BLOCKSIZE;
+	for (int i = 0; i < iterations; i++) {
+		int index = blockIdx.x * blockDim.x + threadId.x + i;
+		const Particle& p = particles[index];
 		// element-wise floor
 		Vector2i base_coord = (p.x * INV_DX - Vector2d(0.5, 0.5)).cast<int>();
 		Vector2d fx = p.x * INV_DX - base_coord.cast<double>();
@@ -275,85 +251,53 @@ void G2P(void)
 	}
 }
 
-void Update(void)
+void cudaMPM::Update(void)
 {
-	solver->P2G();
-	solver->UpdateGridVelocity();
-	solver->G2P();
-	step++;
-	glutPostRedisplay();
+	dim3 blockDim(BLOCKSIZE, 1);
+	dim3 gridDim(
+		(NUM_PARTICLES + blockDim.x - 1) / blockDim.x,
+		(1 + blockDim.y - 1) / blockDim.y
+	);
+	dim3 blockDimG(BLOCKSIDE, BLOCKSIDE);
+	dim3 gridDimG(
+		(GRID_RES + BLOCKSIDE - 1) / BLOCKSIDE,
+		(GRID_RES + BLOCKSIDE - 1) / BLOCKSIDE
+	);
+	memset(grid, 0, sizeof(grid));
+	cudaMemset(cudaDeviceGrid, 0, (GRID_RES + 1) * (GRID_RES + 1) * sizeof(Vector3d));
+	P2G<<<gridDim, blockDim>>>();
+	UpdateGridVelocity<<<gridDimG, blockDimG>>>();
+	G2P<<<gridDim, blockDim>>>();
+}
+
+cudaMPM::cudaMPM() {
+	NUM_PARTICLES = 0;
+	BLOCK_PARTICLES = 500;
+	//vector<Particle> particles;
+	grid = (Vector3d*)malloc((GRID_RES + 1) *(GRID_RES + 1)*sizeof(Vector3d));
+	cudaDeviceGrid = (Vector3d*)malloc((GRID_RES + 1) * (GRID_RES + 1) * sizeof(Vector3d));
 }
 
 
-//Rendering
-void InitGL(void)
+void cudaMPM::setup(void)
 {
-	glClearColor(0.9f, 0.9f, 0.9f, 1);
-	glEnable(GL_POINT_SMOOTH);
-	glPointSize(2);
-	glMatrixMode(GL_PROJECTION);
-}
+	addParticles(0.55, 0.45);
+	addParticles(0.45, 0.65);
+	addParticles(0.55, 0.85);
+	cudaMalloc(&cudaDeviceNumParticles, sizeof(int));
+	cudaMalloc(&cudaDeviceParticles, sizeof(Particle) * NUM_PARTICLES);
+	cudaMalloc(&cudaDeviceGrid, sizeof(Vector3) * (GRID_RES + 1) * (GRID_RES + 1));
 
-//Rendering
-void Render(void)
-{
-	glClear(GL_COLOR_BUFFER_BIT);
+	cudaMemcpy(cudaDeviceNumParticles, NUM_PARTICLES, sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(cudaDeviceParticles, particles, sizeof(Particle) * NUM_PARTICLES, cudaMemcpyHostToDevice);
+	cudaMemcpy(cudaDeviceGrid, grid, sizeof(Vector3) * (GRID_RES + 1) * (GRID_RES + 1), cudaMemcpyHostToDevice);
 
-	glLoadIdentity();
-	glOrtho(0, WINDOW_WIDTH, 0, WINDOW_HEIGHT, 0, 1);
-
-	glColor4f(0.2f, 0.6f, 1.0f, 1);
-	glBegin(GL_POINTS);
-	for (auto& p : particles)
-		glVertex2f(p.x(0) * WINDOW_WIDTH, p.x(1) * WINDOW_HEIGHT);
-	glEnd();
-
-	glutSwapBuffers();
-	if (step % INV_FPS == 0) {
-		// save image output
-		unsigned char* buffer = (unsigned char*)malloc(WINDOW_WIDTH * WINDOW_HEIGHT * 3);
-		glReadPixels(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, buffer);
-		string filepath = "./imgs/mpm" + to_string(frame) + ".png";
-		stbi_flip_vertically_on_write(true);
-		stbi_write_png(filepath.c_str(), WINDOW_WIDTH, WINDOW_HEIGHT, 3, buffer, WINDOW_WIDTH * 3);
-		frame++;
-		free(buffer);
-	}
-
-}
-
-void Keyboard(unsigned char c, __attribute__((unused)) int x, __attribute__((unused)) int y)
-{
-	switch (c)
-	{
-	case ' ':
-		if (particles.size() >= MAX_PARTICLES)
-			std::cout << "maximum number of particles reached" << std::endl;
-		else
-		{
-			addParticles(0.5, 0.5);
-		}
-		break;
-	case 'r':
-	case 'R':
-		particles.clear();
-		InitMPM();
-		break;
-	}
-}
-
-int main(int argc, char** argv)
-{
-	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
-	glutInit(&argc, argv);
-	glutCreateWindow("MPM");
-	glutDisplayFunc(Render);
-	glutIdleFunc(Update);
-	glutKeyboardFunc(Keyboard);
-
-	InitGL();
-	InitMPM();
-
-	glutMainLoop();
-	return 0;
+	params.NUM_PARTICLES = NUM_PARTICLES;
+	params.particles = particles;
+	params.grid = grid;
+	int NUM_PARTICLES = 0;					// keeps track of current number of particles
+	// Data structures
+	vector<Particle> particles;
+	// Vector3: [velocity_x, velocity_y, mass]
+	Vector3d grid[GRID_RES + 1][GRID_RES + 1];
 }
