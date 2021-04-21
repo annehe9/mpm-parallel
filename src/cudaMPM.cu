@@ -134,8 +134,6 @@ __global__ void P2G(void)
 		Matrix2d affine = stress + MASS * p.C;
 
 		// P2G
-		// must read surrounding 9 grids which may be in different blocks, but this is fine
-		// we don't need shared mem of grid because we are only reading and not modifying grid
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < 3; j++) {
 				Vector2d dpos = (Vector2d(i, j) - fx) * DX;
