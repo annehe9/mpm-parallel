@@ -15,18 +15,14 @@ public:
 	cudaMPM();
 	void setup();
 	void addParticles(double xcenter, double ycenter);
-	void P2G(void);
-	void UpdateGridVelocity(void);
-	void G2P(void);
 	void Update(void);
 
-private:
+
 	static int NUM_PARTICLES;
-	static int BLOCK_PARTICLES;
 	const static int GRID_RES = 80;
 	vector<Particle> particles;
-	Vector3d grid[GRID_RES + 1][GRID_RES + 1];
+	Vector3d* grid[];
 
 	vector<Particle> cudaDeviceParticles;
-	Vector3d cudaDeviceGrid[GRID_RES + 1][GRID_RES + 1];
+	Vector3d* cudaDeviceGrid[];
 };
