@@ -5,6 +5,7 @@
 #include <GL/glut.h>
 #endif
 
+#include <stdio.h>
 #include <iostream>
 #include <vector>
 #include <cstring>
@@ -15,11 +16,12 @@ using namespace std;
 #include <eigen3/Eigen/Dense>
 using namespace Eigen;
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
-
-int iteration = 0;
 
 // References:
 // https://github.com/yuanming-hu/taichi_mpm/blob/master/mls-mpm88-explained.cpp
@@ -46,8 +48,8 @@ struct Cell
 */
 
 // Granularity
-const static int MAX_PARTICLES = 2500;
-const static int BLOCK_PARTICLES = 500;		// number of particles added in a block
+const static int MAX_PARTICLES = 25000;
+const static int BLOCK_PARTICLES = 1000;		// number of particles added in a block
 int NUM_PARTICLES = 0;					// keeps track of current number of particles
 const static int GRID_RES = 80;				// grid dim of one side
 const static int NUM_CELLS = GRID_RES * GRID_RES;	// number of cells in the grid
@@ -58,7 +60,7 @@ const static double INV_DX = 1.0 / DX;
 // Data structures
 static vector<Particle> particles;
 // Vector3: [velocity_x, velocity_y, mass]
-static Vector3d grid[GRID_RES][GRID_RES];
+static Vector3d grid[GRID_RES + 1][GRID_RES + 1];
 //static Cell grid[GRID_RES][GRID_RES];
 
 // Simulation params
@@ -75,8 +77,14 @@ const static double LAMBDA_0 = (E * NU) / ((1 + NU) * (1 - 2 * NU));
 // Render params
 const static int WINDOW_WIDTH = 800;
 const static int WINDOW_HEIGHT = 600;
-const static double VIEW_WIDTH = 1.5 * 800;
-const static double VIEW_HEIGHT = 1.5 * 600;
+//const static double VIEW_WIDTH = 1.5 * 800;
+//const static double VIEW_HEIGHT = 1.5 * 600;
+
+// Image output params
+static int frame = 0;	// current image
+static int step = 0;	// current simulation step
+const static int FPS = 500; // fps of output video
+const static int INV_FPS = (1.0 / DT) / FPS;
 
 // yay add more particles randomly in a square
 void addParticles(double xcenter, double ycenter)
@@ -98,7 +106,7 @@ void InitMPM(void)
 void P2G(void)
 {
 	memset(grid, 0, sizeof(grid));
-	for (Particle &p : particles) {
+	for (Particle& p : particles) {
 		Vector2i base_coord = (p.x * INV_DX - Vector2d(0.5, 0.5)).cast<int>();
 		Vector2d fx = p.x * INV_DX - base_coord.cast<double>();
 
@@ -125,19 +133,19 @@ void P2G(void)
 		// Current volume
 		double J = p.F.determinant();
 
-		// Polar decomposition for fixed corotated model
+		// Polar decomposition for fixed corotated model, https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf paragraph after Eqn. 45
 		JacobiSVD<Matrix2d> svd(p.F, ComputeFullU | ComputeFullV);
 		Matrix2d r = svd.matrixU() * svd.matrixV().transpose();
 		//Matrix2d s = svd.matrixV() * svd.singularValues().asDiagonal() * svd.matrixV().transpose();
 
-		// [http://mpm.graphics Paragraph after Eqn. 176]
+		// [https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf Paragraph after Eqn. 176]
 		double Dinv = 4 * INV_DX * INV_DX;
-		// [http://mpm.graphics Eqn. 52]
+		// [https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf Eqn. 52]
 		Matrix2d PF_0 = (2 * mu) * (p.F - r) * p.F.transpose();
-		double pf1tmp= (lambda * (J - 1) * J);
+		double pf1tmp = (lambda * (J - 1) * J);
 		Matrix2d PF_1;
-		PF_1 << pf1tmp, pf1tmp, 
-				pf1tmp, pf1tmp;
+		PF_1 << pf1tmp, pf1tmp,
+			pf1tmp, pf1tmp;
 		Matrix2d PF = PF_0 + PF_1;
 
 		// Cauchy stress times dt and inv_dx
@@ -165,8 +173,8 @@ void P2G(void)
 
 void UpdateGridVelocity(void) {
 	// For all grid nodes
-	for (int i = 0; i < GRID_RES; i++) {
-		for (int j = 0; j < GRID_RES; j++) {
+	for (int i = 0; i <= GRID_RES; i++) {
+		for (int j = 0; j <= GRID_RES; j++) {
 			auto& g = grid[i][j];
 			// No need for epsilon here
 			if (g[2] > 0) {
@@ -182,7 +190,7 @@ void UpdateGridVelocity(void) {
 				double y = (double)j / GRID_RES;
 
 				// Sticky boundary
-				if (x < boundary || x > 1 - boundary) { 
+				if (x < boundary || x > 1 - boundary) {
 					g[0] = 0.0;
 				}
 				// Separate boundary
@@ -196,7 +204,7 @@ void UpdateGridVelocity(void) {
 
 void G2P(void)
 {
-	for (Particle &p : particles) {
+	for (Particle& p : particles) {
 		// element-wise floor
 		Vector2i base_coord = (p.x * INV_DX - Vector2d(0.5, 0.5)).cast<int>();
 		Vector2d fx = p.x * INV_DX - base_coord.cast<double>();
@@ -247,10 +255,9 @@ void G2P(void)
 		JacobiSVD<Matrix2d> svd(F, ComputeFullU | ComputeFullV);
 		Matrix2d svd_u = svd.matrixU();
 		Matrix2d svd_v = svd.matrixV();
-		Matrix2d sig = svd.singularValues().asDiagonal();
-
 		// Snow Plasticity
-		sig = sig.array().min(1.0f + 7.5e-3).max(1.0 - 2.5e-2);
+		Vector2d sigvalues = svd.singularValues().array().min(1.0f + 7.5e-3).max(1.0 - 2.5e-2);
+		Matrix2d sig = sigvalues.asDiagonal();
 
 		double oldJ = F.determinant();
 		F = svd_u * sig * svd_v.transpose();
@@ -267,10 +274,8 @@ void Update(void)
 	P2G();
 	UpdateGridVelocity();
 	G2P();
+	step++;
 	glutPostRedisplay();
-
-        printf("Iteration: %d\n", iteration);
-        iteration += 1;
 }
 
 
@@ -289,15 +294,26 @@ void Render(void)
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glLoadIdentity();
-	glOrtho(0, VIEW_WIDTH, 0, VIEW_HEIGHT, 0, 1);
+	glOrtho(0, WINDOW_WIDTH, 0, WINDOW_HEIGHT, 0, 1);
 
 	glColor4f(0.2f, 0.6f, 1.0f, 1);
 	glBegin(GL_POINTS);
 	for (auto& p : particles)
-		glVertex2f(p.x(0) * VIEW_WIDTH, p.x(1) * VIEW_HEIGHT);
+		glVertex2f(p.x(0) * WINDOW_WIDTH, p.x(1) * WINDOW_HEIGHT);
 	glEnd();
 
 	glutSwapBuffers();
+	if (step % INV_FPS == 0) {
+		// save image output
+		unsigned char* buffer = (unsigned char*)malloc(WINDOW_WIDTH * WINDOW_HEIGHT * 3);
+		glReadPixels(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, buffer);
+		string filepath = "./imgs/mpm" + to_string(frame) + ".png";
+		stbi_flip_vertically_on_write(true);
+		stbi_write_png(filepath.c_str(), WINDOW_WIDTH, WINDOW_HEIGHT, 3, buffer, WINDOW_WIDTH * 3);
+		frame++;
+		free(buffer);
+	}
+
 }
 
 void Keyboard(unsigned char c, __attribute__((unused)) int x, __attribute__((unused)) int y)
