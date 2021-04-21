@@ -1,3 +1,6 @@
+#include "eigen3/Eigen/Dense"
+using namespace Eigen;
+
 class cudaMPM {
 public:
 	// Particle representation
@@ -18,8 +21,9 @@ public:
 	void Update(void);
 
 private:
-	int NUM_PARTICLES;
-	int BLOCK_PARTICLES;
+	static int NUM_PARTICLES;
+	static int BLOCK_PARTICLES;
+	const static int GRID_RES = 80;
 	vector<Particle> particles;
 	Vector3d grid[GRID_RES + 1][GRID_RES + 1];
 

@@ -13,7 +13,7 @@
 #include <algorithm>
 using namespace std;
 
-#include <eigen3/Eigen/Dense>
+#include "eigen3/Eigen/Dense"
 using namespace Eigen;
 
 #include <cuda.h>
@@ -39,7 +39,6 @@ using namespace Eigen;
 // Granularity
 __constant__ int MAX_PARTICLES = 25000;
 __constant__ int BLOCK_PARTICLES = 1000;		// number of particles added in a block
-__constant__ int GRID_RES = 80;				// grid dim of one side
 __constant__ int NUM_CELLS = GRID_RES * GRID_RES;	// number of cells in the grid
 __constant__ double DT = 0.00001;			// integration timestep
 __constant__ double DX = 1.0 / GRID_RES;
@@ -80,9 +79,9 @@ void cudaMPM::addParticles(double xcenter, double ycenter)
 
 __global__ void P2G(void)
 {
-	int iterations = (NUM_PARTICLES + BLOCKSIZE - 1) / BLOCKSIZE;
+	int iterations = (cuConstParams.NUM_PARTICLES + BLOCKSIZE - 1) / BLOCKSIZE;
 	for (int i = 0; i < iterations; i++) {
-		int index = blockIdx.x * blockDim.x + threadId.x + i;
+		int index = blockIdx.x * blockDim.x + threadIdx.x + i;
 		const Particle& p = cuConstParams.particles[index];
 		Vector2i base_coord = (p.x * INV_DX - Vector2d(0.5, 0.5)).cast<int>();
 		Vector2d fx = p.x * INV_DX - base_coord.cast<double>();
@@ -153,7 +152,7 @@ __global__ void P2G(void)
 __global__ void UpdateGridVelocity(void) {
 	int iterations = (NUM_CELLS + BLOCKSIZE - 1) / BLOCKSIZE;
 	for (int i = 0; i < iterations; i++) {
-		int index = blockIdx.x * blockDim.x + threadId.x + i;
+		int index = blockIdx.x * blockDim.x + threadIdx.x + i;
 		int i = index / GRID_RES;
 		int j = index % GRID_RES;
 		Vector3d& g = grid[i][j];
@@ -183,9 +182,9 @@ __global__ void UpdateGridVelocity(void) {
 
 __global__ void G2P(void)
 {
-	int iterations = (NUM_PARTICLES + BLOCKSIZE - 1) / BLOCKSIZE;
+	int iterations = (cuConstParams.NUM_PARTICLES + BLOCKSIZE - 1) / BLOCKSIZE;
 	for (int i = 0; i < iterations; i++) {
-		int index = blockIdx.x * blockDim.x + threadId.x + i;
+		int index = blockIdx.x * blockDim.x + threadIdx.x + i;
 		const Particle& p = particles[index];
 		// element-wise floor
 		Vector2i base_coord = (p.x * INV_DX - Vector2d(0.5, 0.5)).cast<int>();

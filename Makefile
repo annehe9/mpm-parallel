@@ -41,7 +41,7 @@ $(OBJDIR)/main.o: $(SRCDIR)/main.cpp
 	mkdir -p $(OBJDIR)
 	$(CC) $(CFLAGS) -c $(SRCDIR)/main.cpp -o $(OBJDIR)/main.o
 
-$(OBJDIR)/main.o: $(SRCDIR)/cudaMPM.cu
+$(OBJDIR)/cudaMPM.o: $(SRCDIR)/cudaMPM.cu
 	mkdir -p $(OBJDIR)
 	$(NVCC) $(NVCCFLAGS) -c $(SRCDIR)/cudaMPM.cu -o $(OBJDIR)/cudaMPM.o
 clean:
