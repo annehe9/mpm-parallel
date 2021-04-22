@@ -86,6 +86,140 @@ static int step = 0;	// current simulation step
 const static int FPS = 500; // fps of output video
 const static int INV_FPS = (1.0 / DT) / FPS;
 
+
+/* Operations to replace eigen on CUDA, for 2x2 matrices. */
+
+double determinant(Matrix2d M) {
+        return M(0,0) * M(1,1) - M(0,1) * M(1,0);
+}
+
+struct NullResults {
+        Matrix2d kernel;
+        int nullity;
+};
+
+struct EigenResults {
+        Matrix2d eigenvectors;
+        Vector2d eigenvalues; // may have 0's
+        int rank;
+};
+
+struct SVDResults {
+        Matrix2d V;
+        Matrix2d U;
+        Matrix2d singularValues;
+};
+
+// normalized kernel
+void SolveNull(Matrix2d M, NullResults *R) {
+        double a = M(0, 0);
+        double b = M(0, 1);
+        double c = M(1, 0);
+        double d = M(1, 1);
+
+        R->kernel = Matrix2d();
+        if (a == 0 && b == 0 && c == 0 && d == 0) {
+                R->kernel = Matrix2d::Identity(); // full nullity
+                R->nullity = 2;
+        }
+        else if (b == 0 && d == 0) { // one of a or c is non-zero
+                R->kernel.col(0) << 0, 1;
+                R->nullity = 1;
+        }
+        else if (a == 0 && c == 0) { // one of b or d is non-zero
+                R->kernel.col(0) << 1, 0;
+        }
+        else if (c == 0 && d == 0) { // a and b are non-zero
+                R->kernel.col(0) << -b/a, 1;
+                R->kernel.col(0).normalize();
+                R->nullity = 1;
+        }
+        else if (a == 0 && b == 0) {
+                R->kernel.col(0) << -d/c, 1;
+                R->kernel.col(0).normalize();
+                R->nullity = 1;
+        }
+        else if (a != 0 && b != 0 && c != 0 && d != 0) { // all 4 non-zero
+                if (b/a == d/c) {
+                        R->kernel.col(0) << -b/a, 1;
+                }
+                else {
+                        R->kernel.col(0) << 1/(-c * b/a + d), 1/(c - d * a/b);
+                }
+                R->kernel.col(0).normalize();
+                R->nullity = 1;
+        }
+        else { // 3 are non-zero
+                R->nullity = 0;
+        }
+}
+
+// assume square
+// normalized eigenvectors
+void SolveEigen(Matrix2d M, EigenResults *R) {
+        // solve for eigenvalues: 
+        // quadratic formula, det(M - lambda * I) = 0 for 2x2
+        double a = M(0, 0);
+        double b = M(0, 1);
+        double c = M(1, 0);
+        double d = M(1, 1);
+        double part1 = a + d;
+        double part2 = sqrt(a * a + d * d - 2 * a * d + 4 * b * c);
+        double e1 = (part1 + part2) / 2;
+        double e2 = (part1 - part2) / 2;
+
+        R->eigenvalues = Vector2d();
+        R->rank = 0;
+        if (e1 != 0) {
+                R->eigenvalues(R->rank) = e1;
+                R->rank += 1;
+        }
+        if (e2 != 0) {
+                R->eigenvalues(R->rank) = e2;
+                R->rank += 1;
+        }
+
+        // solve for corresponding eigenvectors -> eigenspace...
+        // kernel of M - lambda * I
+        R->eigenvectors = Matrix2d();
+        Matrix2d I = Matrix2d::Identity();
+        NullResults *N = (NullResults *) malloc(sizeof(NullResults));
+        for (int i = 0; i < R->rank; i++) {
+                SolveNull(M - R->eigenvalues(i) * I, N);
+                R->eigenvectors.col(i) << N->kernel.col(0); // copy
+                // case where eigenspace is rank 2
+                if (N->kernel.cols() == 2) {
+                        assert(i == 0);
+                        R->eigenvectors.col(1) << N->kernel.col(1); // copy
+                        break; // we are done
+                }
+        }
+}
+
+void SolveJacobiSVD(Matrix2d M, SVDResults *R) {
+       R->V = Matrix2d();
+       R->U = Matrix2d();
+       R->singularValues = Matrix2d();
+
+       Matrix2d A = M * M.transpose();
+       EigenResults *Ev = (EigenResults *) malloc(sizeof(EigenResults));
+       SolveEigen(A, Ev);
+       R->V << Ev->eigenvectors;
+
+       Matrix2d B = M * R->V;
+       EigenResults *Eu = (EigenResults *) malloc(sizeof(EigenResults));
+       SolveEigen(B, Eu);
+       R->U << Eu->eigenvectors;
+       R->singularValues << Matrix2d(Eu->eigenvalues.asDiagonal()); // eigenvalues may be 0
+
+       if (Eu->rank < 2) {
+               NullResults *N = (NullResults *) malloc(sizeof(NullResults));
+               SolveNull(M.transpose(), N);
+               R->U << N->kernel; // col-concatenation
+       }
+}
+
+
 // yay add more particles randomly in a square
 void addParticles(double xcenter, double ycenter)
 {
@@ -132,11 +266,37 @@ void P2G(void)
 
 		// Current volume
 		double J = p.F.determinant();
+                assert(J == determinant(p.F)); // TODO
 
 		// Polar decomposition for fixed corotated model, https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf paragraph after Eqn. 45
 		JacobiSVD<Matrix2d> svd(p.F, ComputeFullU | ComputeFullV);
 		Matrix2d r = svd.matrixU() * svd.matrixV().transpose();
 		//Matrix2d s = svd.matrixV() * svd.singularValues().asDiagonal() * svd.matrixV().transpose();
+                SVDResults *R = (SVDResults *) malloc(sizeof(SVDResults));
+                SolveJacobiSVD(p.F, R);
+
+                Matrix2d U = svd.matrixU();
+                if ((U(0, 0) == 1 && U(0, 1) == 0 && U(1, 0) && U(1, 1) == 1)) {
+                        cout << "U" << endl;
+                        cout << U << endl;
+                        cout << R->U << endl;
+                        cout << "\n" << endl;
+                }
+                Matrix2d V = svd.matrixV();
+                if ((V(0, 0) == 1 && V(0, 1) == 0 && V(1, 0) && V(1, 1) == 1)) {
+                        cout << "V" << endl;
+                        cout << V << endl;
+                        cout << R->V << endl;
+                        cout << "\n" << endl;
+                }
+                Matrix2d Sig = Matrix2d(svd.singularValues().asDiagonal());
+                if ((V(0, 0) == 1 && V(0, 1) == 0 && V(1, 0) && V(1, 1) == 1)) {
+                        cout << "Sigma" << endl;
+                        cout << Sig << endl;
+                        cout << R->singularValues << endl;
+                        cout << "\n" << endl;
+                }
+		//assert(r.isApprox(R->U * R->V.transpose())); // TODO
 
 		// [https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf Paragraph after Eqn. 176]
 		double Dinv = 4 * INV_DX * INV_DX;
@@ -259,10 +419,40 @@ void G2P(void)
 		Vector2d sigvalues = svd.singularValues().array().min(1.0f + 7.5e-3).max(1.0 - 2.5e-2);
 		Matrix2d sig = sigvalues.asDiagonal();
 
+                SVDResults *R = (SVDResults *) malloc(sizeof(SVDResults));
+		SolveJacobiSVD(F, R);
+
+                Matrix2d U = svd.matrixU();
+                if ((U(0, 0) == 1 && U(0, 1) == 0 && U(1, 0) && U(1, 1) == 1)) {
+                        cout << "U" << endl;
+                        cout << U << endl;
+                        cout << R->U << endl;
+                        cout << "\n" << endl;
+                }
+                Matrix2d V = svd.matrixV();
+                if ((V(0, 0) == 1 && V(0, 1) == 0 && V(1, 0) && V(1, 1) == 1)) {
+                        cout << "V" << endl;
+                        cout << V << endl;
+                        cout << R->V << endl;
+                        cout << "\n" << endl;
+                }
+                Matrix2d Sig = Matrix2d(svd.singularValues().asDiagonal());
+                if ((V(0, 0) == 1 && V(0, 1) == 0 && V(1, 0) && V(1, 1) == 1)) {
+                        cout << "Sigma" << endl;
+                        cout << Sig << endl;
+                        cout << R->singularValues << endl;
+                        cout << "\n" << endl;
+                }
+		//assert(svd_u.isApprox(R->U)); // TODO
+		//assert(svd_v.isApprox(R->V)); // TODO
+                //assert(sig.isApprox(R->singularValues)); // TODO
+
 		double oldJ = F.determinant();
+                assert(oldJ == determinant(F)); // TODO
 		F = svd_u * sig * svd_v.transpose();
 
 		double Jp_new = min(max(p.Jp * oldJ / F.determinant(), 0.6), 20.0);
+                assert(Jp_new == min(max(p.Jp * oldJ / determinant(F), 0.6), 20.0)); // TODO
 
 		p.Jp = Jp_new;
 		p.F = F;
