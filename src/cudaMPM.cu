@@ -77,6 +77,25 @@ void cudaMPM::addParticles(double xcenter, double ycenter)
 	params.NUM_PARTICLES += BLOCK_PARTICLES;
 }
 
+/* Operations to replace eigen on CUDA, for 2x2 matrices. */
+
+__device__ double determinant(Matrix2d M) {
+        return M(0,0) * M(1,1) - M(0,1) * M(1,0);
+}
+
+struct SVDResults {
+        Matrix2d U;
+        Matrix2d V;
+        Matrix2d singularValues;
+};
+
+__device__ void SolveJacobiSVD(Matrix2d M, SVDResults * const &R) {
+       // TODO
+       R->U = M; 
+       R->V = M; 
+       R->singularValues = M; 
+}
+
 // GPU function
 __global__ void P2G(void)
 {
@@ -108,12 +127,13 @@ __global__ void P2G(void)
 		double lambda = LAMBDA_0 * e;
 
 		// Current volume
-		double J = 0; // p.F.determinant(); // TODO: determinant
+		double J = determinant(p.F); // TODO: determinant
 
 		// Polar decomposition for fixed corotated model, https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf paragraph after Eqn. 45
-		//JacobiSVD<Matrix2d> svd(p.F, ComputeFullU | ComputeFullV); // TODO: JacobiSVD
-		Matrix2d r(2, 2); //= svd.matrixU() * svd.matrixV().transpose(); // TODO: related to above
-		//Matrix2d s = svd.matrixV() * svd.singularValues().asDiagonal() * svd.matrixV().transpose();
+                SVDResults R;
+                SolveJacobiSVD(p.F, &R); //JacobiSVD<Matrix2d> svd(p.F, ComputeFullU | ComputeFullV); // TODO: JacobiSVD
+		Matrix2d r = R.U * R.V.transpose(); // svd.matrixU() * svd.matrixV().transpose(); // TODO: related to above
+		Matrix2d s = R.V * R.singularValues * R.V.transpose(); //Matrix2d s = svd.matrixV() * svd.singularValues().asDiagonal() * svd.matrixV().transpose(); // TODO
 
 		// [https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf Paragraph after Eqn. 176]
 		double Dinv = 4 * INV_DX * INV_DX;
@@ -235,17 +255,18 @@ __global__ void G2P(void)
 		// MLS-MPM F-update eqn 17
 		Matrix2d F = (Matrix2d::Identity() + DT * p.C) * p.F;
 
-		//JacobiSVD<Matrix2d> svd(F, ComputeFullU | ComputeFullV); // TODO: JacobiSVD
-		Matrix2d svd_u(2, 2); //svd.matrixU(); // TODO: ^
-		Matrix2d svd_v(2, 2); //svd.matrixV(); // TODO: ^
-                Vector2d sigvalues(2); //svd.singularValues().array().min(1.0f + 7.5e-3).max(1.0 - 2.5e-2); // TODO; may not need
+                SVDResults R;
+		SolveJacobiSVD(F, &R); //JacobiSVD<Matrix2d> svd(F, ComputeFullU | ComputeFullV); // TODO: JacobiSVD
+		Matrix2d svd_u = R.U; //svd.matrixU(); // TODO: ^
+		Matrix2d svd_v = R.V; //svd.matrixV(); // TODO: ^
+                //Vector2d sigvalues(2); //svd.singularValues().array().min(1.0f + 7.5e-3).max(1.0 - 2.5e-2); // TODO; may not need
 		// Snow Plasticity
-		Matrix2d sig = sigvalues.asDiagonal();
+                Matrix2d sig = R.singularValues; //Matrix sig = sigvalues.asDiagonal(); TODO
 
-		double oldJ = 0; //F.determinant(); // TODO: determinant
+		double oldJ = determinant(F); // TODO: determinant
 		F = svd_u * sig * svd_v.transpose();
 
-		double Jp_new = 0; //min(max(p.Jp * oldJ / F.determinant(), 0.6), 20.0); // TODO: determinant
+		double Jp_new = 0; min(max(p.Jp * oldJ / determinant(F), 0.6), 20.0); // TODO: determinant
 
 		p.Jp = Jp_new;
 		p.F = F;
