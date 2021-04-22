@@ -3,6 +3,9 @@ using namespace Eigen;
 
 class cudaMPM {
 public:
+	static int NUM_PARTICLES;
+	const static int GRID_RES = 80;
+
 	// Particle representation
 	struct Particle
 	{
@@ -17,9 +20,6 @@ public:
 	void addParticles(double xcenter, double ycenter);
 	void Update(void);
 
-
-	static int NUM_PARTICLES;
-	const static int GRID_RES = 80;
 	vector<Particle> particles;
 	Vector3d* grid[];
 

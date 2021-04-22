@@ -22,10 +22,6 @@ using namespace Eigen;
 
 #include "cudaMPM.h"
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-
 // Granularity
 const static int MAX_PARTICLES = 25000;
 const static int BLOCK_PARTICLES = 1000;		// number of particles added in a block
