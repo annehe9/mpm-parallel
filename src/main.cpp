@@ -61,7 +61,6 @@ void InitMPM(void)
 {
 	solver = new cudaMPM();
 	solver->setup();
-	cout << "initializing mpm with " << solver->NUM_PARTICLES/3 << " particles" << endl;
 }
 
 double get_ms(struct timespec t) {

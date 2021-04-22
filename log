@@ -1,0 +1,231 @@
+mkdir -p obj
+g++ -fopenmp -std=c++11 -pedantic -Wno-deprecated -Wall -Wextra -O3 -DNDEBUG  -I./include -I./src -c src/main.cpp -o obj/main.o
+In file included from src/main.cpp:21:0:
+src/stb_image_write.h: In function ‘void stbiw__write1(stbi__write_context*, unsigned char)’:
+src/stb_image_write.h:400:42: warning: comparison between signed and unsigned integer expressions [-Wsign-compare]
+    if (s->buf_used + 1 > sizeof(s->buffer))
+                                          ^
+src/stb_image_write.h: In function ‘void stbiw__write3(stbi__write_context*, unsigned char, unsigned char, unsigned char)’:
+src/stb_image_write.h:408:42: warning: comparison between signed and unsigned integer expressions [-Wsign-compare]
+    if (s->buf_used + 3 > sizeof(s->buffer))
+                                          ^
+src/stb_image_write.h: In function ‘int stbi_write_bmp_to_func(void (*)(void*, void*, int), void*, int, int, int, const void*)’:
+src/stb_image_write.h:502:32: warning: missing initializer for member ‘stbi__write_context::context’ [-Wmissing-field-initializers]
+    stbi__write_context s = { 0 };
+                                ^
+src/stb_image_write.h:502:32: warning: missing initializer for member ‘stbi__write_context::buffer’ [-Wmissing-field-initializers]
+src/stb_image_write.h:502:32: warning: missing initializer for member ‘stbi__write_context::buf_used’ [-Wmissing-field-initializers]
+src/stb_image_write.h: In function ‘int stbi_write_bmp(const char*, int, int, int, const void*)’:
+src/stb_image_write.h:510:32: warning: missing initializer for member ‘stbi__write_context::context’ [-Wmissing-field-initializers]
+    stbi__write_context s = { 0 };
+                                ^
+src/stb_image_write.h:510:32: warning: missing initializer for member ‘stbi__write_context::buffer’ [-Wmissing-field-initializers]
+src/stb_image_write.h:510:32: warning: missing initializer for member ‘stbi__write_context::buf_used’ [-Wmissing-field-initializers]
+src/stb_image_write.h: In function ‘int stbi_write_tga_to_func(void (*)(void*, void*, int), void*, int, int, int, const void*)’:
+src/stb_image_write.h:601:32: warning: missing initializer for member ‘stbi__write_context::context’ [-Wmissing-field-initializers]
+    stbi__write_context s = { 0 };
+                                ^
+src/stb_image_write.h:601:32: warning: missing initializer for member ‘stbi__write_context::buffer’ [-Wmissing-field-initializers]
+src/stb_image_write.h:601:32: warning: missing initializer for member ‘stbi__write_context::buf_used’ [-Wmissing-field-initializers]
+src/stb_image_write.h: In function ‘int stbi_write_tga(const char*, int, int, int, const void*)’:
+src/stb_image_write.h:609:32: warning: missing initializer for member ‘stbi__write_context::context’ [-Wmissing-field-initializers]
+    stbi__write_context s = { 0 };
+                                ^
+src/stb_image_write.h:609:32: warning: missing initializer for member ‘stbi__write_context::buffer’ [-Wmissing-field-initializers]
+src/stb_image_write.h:609:32: warning: missing initializer for member ‘stbi__write_context::buf_used’ [-Wmissing-field-initializers]
+src/stb_image_write.h: In function ‘int stbi_write_hdr_to_func(void (*)(void*, void*, int), void*, int, int, int, const float*)’:
+src/stb_image_write.h:775:32: warning: missing initializer for member ‘stbi__write_context::context’ [-Wmissing-field-initializers]
+    stbi__write_context s = { 0 };
+                                ^
+src/stb_image_write.h:775:32: warning: missing initializer for member ‘stbi__write_context::buffer’ [-Wmissing-field-initializers]
+src/stb_image_write.h:775:32: warning: missing initializer for member ‘stbi__write_context::buf_used’ [-Wmissing-field-initializers]
+src/stb_image_write.h: In function ‘int stbi_write_hdr(const char*, int, int, int, const float*)’:
+src/stb_image_write.h:783:32: warning: missing initializer for member ‘stbi__write_context::context’ [-Wmissing-field-initializers]
+    stbi__write_context s = { 0 };
+                                ^
+src/stb_image_write.h:783:32: warning: missing initializer for member ‘stbi__write_context::buffer’ [-Wmissing-field-initializers]
+src/stb_image_write.h:783:32: warning: missing initializer for member ‘stbi__write_context::buf_used’ [-Wmissing-field-initializers]
+src/stb_image_write.h: In function ‘int stbi_write_jpg_to_func(void (*)(void*, void*, int), void*, int, int, int, const void*, int)’:
+src/stb_image_write.h:1579:32: warning: missing initializer for member ‘stbi__write_context::context’ [-Wmissing-field-initializers]
+    stbi__write_context s = { 0 };
+                                ^
+src/stb_image_write.h:1579:32: warning: missing initializer for member ‘stbi__write_context::buffer’ [-Wmissing-field-initializers]
+src/stb_image_write.h:1579:32: warning: missing initializer for member ‘stbi__write_context::buf_used’ [-Wmissing-field-initializers]
+src/stb_image_write.h: In function ‘int stbi_write_jpg(const char*, int, int, int, const void*, int)’:
+src/stb_image_write.h:1588:32: warning: missing initializer for member ‘stbi__write_context::context’ [-Wmissing-field-initializers]
+    stbi__write_context s = { 0 };
+                                ^
+src/stb_image_write.h:1588:32: warning: missing initializer for member ‘stbi__write_context::buffer’ [-Wmissing-field-initializers]
+src/stb_image_write.h:1588:32: warning: missing initializer for member ‘stbi__write_context::buf_used’ [-Wmissing-field-initializers]
+In file included from src/main.cpp:23:0:
+src/cudaMPM.h: At global scope:
+src/cudaMPM.h:24:17: warning: ISO C++ forbids zero-size array ‘grid’ [-Wpedantic]
+  Vector3d* grid[];
+                 ^
+src/cudaMPM.h:27:27: warning: ISO C++ forbids zero-size array ‘cudaDeviceGrid’ [-Wpedantic]
+  Vector3d* cudaDeviceGrid[];
+                           ^
+mkdir -p obj
+nvcc -O3 --gpu-architecture compute_61 -ccbin /usr/bin/gcc -c src/cudaMPM.cu -o obj/cudaMPM.o
+In file included from src/eigen3/Eigen/Core:257:0,
+                 from src/eigen3/Eigen/Dense:1,
+                 from src/cudaMPM.cu:16:
+/usr/local/depot/cuda/bin/../targets/x86_64-linux/include/host_defines.h:54:2: warning: #warning "host_defines.h is an internal header file and must not be used directly.  This file will be removed in a future CUDA release.  Please use cuda_runtime_api.h or cuda_runtime.h instead." [-Wcpp]
+ #warning "host_defines.h is an internal header file and must not be used directly.  This file will be removed in a future CUDA release.  Please use cuda_runtime_api.h or cuda_runtime.h instead."
+  ^
+src/eigen3/Eigen/src/Core/MathFunctions.h(1081): warning: calling a __host__ function from a __host__ __device__ function is not allowed
+
+src/eigen3/Eigen/src/Core/MathFunctions.h(1081): warning: calling a __host__ function from a __host__ __device__ function is not allowed
+
+src/eigen3/Eigen/src/Core/MathFunctions.h(1086): warning: calling a __host__ function from a __host__ __device__ function is not allowed
+
+src/eigen3/Eigen/src/Core/MathFunctions.h(1086): warning: calling a __host__ function from a __host__ __device__ function is not allowed
+
+src/cudaMPM.cu(246): warning: variable "oldJ" was declared but never referenced
+
+src/eigen3/Eigen/src/Core/AssignEvaluator.h(836): warning: calling a __host__ function from a __host__ __device__ function is not allowed
+          detected during:
+            instantiation of "void Eigen::internal::call_assignment_no_alias(Dst &, const Src &, const Func &) [with Dst=Eigen::Matrix<double, 2, 2, 0, 2, 2>, Src=Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::CwiseBinaryOp<Eigen::internal::scalar_difference_op<double, double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>>, Eigen::Transpose<const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>, Func=Eigen::internal::assign_op<double, double>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(732): here
+            instantiation of "Derived &Eigen::PlainObjectBase<Derived>::_set_noalias(const Eigen::DenseBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, OtherDerived=Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::CwiseBinaryOp<Eigen::internal::scalar_difference_op<double, double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>>, Eigen::Transpose<const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(537): here
+            instantiation of "Eigen::PlainObjectBase<Derived>::PlainObjectBase(const Eigen::DenseBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, OtherDerived=Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::CwiseBinaryOp<Eigen::internal::scalar_difference_op<double, double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>>, Eigen::Transpose<const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>]" 
+src/eigen3/Eigen/src/Core/Matrix.h(378): here
+            instantiation of "Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>::Matrix(const Eigen::EigenBase<OtherDerived> &) [with _Scalar=double, _Rows=2, _Cols=2, _Options=0, _MaxRows=2, _MaxCols=2, OtherDerived=Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::CwiseBinaryOp<Eigen::internal::scalar_difference_op<double, double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>>, Eigen::Transpose<const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>]" 
+src/cudaMPM.cu(122): here
+
+src/eigen3/Eigen/src/Core/AssignEvaluator.h(836): warning: calling a __host__ function from a __host__ __device__ function is not allowed
+          detected during:
+            instantiation of "void Eigen::internal::call_assignment_no_alias(Dst &, const Src &, const Func &) [with Dst=Eigen::Matrix<double, 2, 1, 0, 2, 1>, Src=Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 1, 0, 2, 1>, 0>, Func=Eigen::internal::assign_op<double, double>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(732): here
+            instantiation of "Derived &Eigen::PlainObjectBase<Derived>::_set_noalias(const Eigen::DenseBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 1, 0, 2, 1>, OtherDerived=Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 1, 0, 2, 1>, 0>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(537): here
+            instantiation of "Eigen::PlainObjectBase<Derived>::PlainObjectBase(const Eigen::DenseBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 1, 0, 2, 1>, OtherDerived=Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 1, 0, 2, 1>, 0>]" 
+src/eigen3/Eigen/src/Core/Matrix.h(378): here
+            instantiation of "Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>::Matrix(const Eigen::EigenBase<OtherDerived> &) [with _Scalar=double, _Rows=2, _Cols=1, _Options=0, _MaxRows=2, _MaxCols=1, OtherDerived=Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 1, 0, 2, 1>, 0>]" 
+src/cudaMPM.cu(143): here
+
+src/eigen3/Eigen/src/Core/AssignEvaluator.h(836): warning: calling a __host__ function from a __host__ __device__ function is not allowed
+          detected during:
+            instantiation of "void Eigen::internal::call_assignment_no_alias(Dst &, const Src &, const Func &) [with Dst=Eigen::Matrix<double, 2, 2, 0, 2, 2>, Src=Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>>, Eigen::Transpose<Eigen::Matrix<double, 2, 1, 0, 2, 1>>, 0>, Func=Eigen::internal::assign_op<double, double>]" 
+src/eigen3/Eigen/src/Core/ProductEvaluators.h(196): here
+            instantiation of "void Eigen::internal::Assignment<DstXprType, Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<ScalarBis, Scalar>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<ScalarBis>, Plain>, const Eigen::Product<Lhs, Rhs, 0>>, AssignFunc, Eigen::internal::Dense2Dense, void>::run(DstXprType &, const Eigen::internal::Assignment<DstXprType, Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<ScalarBis, Scalar>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<ScalarBis>, Plain>, const Eigen::Product<Lhs, Rhs, 0>>, AssignFunc, Eigen::internal::Dense2Dense, void>::SrcXprType &, const AssignFunc &) [with DstXprType=Eigen::Matrix<double, 2, 2, 0, 2, 2>, Lhs=Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Rhs=Eigen::Transpose<Eigen::Matrix<double, 2, 1, 0, 2, 1>>, AssignFunc=Eigen::internal::assign_op<double, double>, Scalar=double, ScalarBis=double, Plain=const Eigen::Matrix<double, 2, 2, 0, 2, 2>]" 
+(836): here
+            instantiation of "void Eigen::internal::call_assignment_no_alias(Dst &, const Src &, const Func &) [with Dst=Eigen::Matrix<double, 2, 2, 0, 2, 2>, Src=Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Eigen::Transpose<Eigen::Matrix<double, 2, 1, 0, 2, 1>>, 0>>, Func=Eigen::internal::assign_op<double, double>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(732): here
+            instantiation of "Derived &Eigen::PlainObjectBase<Derived>::_set_noalias(const Eigen::DenseBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, OtherDerived=Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Eigen::Transpose<Eigen::Matrix<double, 2, 1, 0, 2, 1>>, 0>>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(818): here
+            instantiation of "void Eigen::PlainObjectBase<Derived>::_init1<T,OtherDerived>(const Eigen::DenseBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, T=Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Eigen::Transpose<Eigen::Matrix<double, 2, 1, 0, 2, 1>>, 0>>, OtherDerived=Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Eigen::Transpose<Eigen::Matrix<double, 2, 1, 0, 2, 1>>, 0>>]" 
+src/eigen3/Eigen/src/Core/Matrix.h(294): here
+            instantiation of "Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>::Matrix(const T &) [with _Scalar=double, _Rows=2, _Cols=2, _Options=0, _MaxRows=2, _MaxCols=2, T=Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Eigen::Transpose<Eigen::Matrix<double, 2, 1, 0, 2, 1>>, 0>>]" 
+(796): here
+            instantiation of "void Eigen::internal::call_assignment(Dst &, const Src &, const Func &, Eigen::internal::enable_if<Eigen::internal::evaluator_assume_aliasing<Src, Eigen::internal::evaluator_traits<Src>::Shape>::value, void *>::type) [with Dst=Eigen::Matrix<double, 2, 2, 0, 2, 2>, Src=Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Eigen::Transpose<Eigen::Matrix<double, 2, 1, 0, 2, 1>>, 0>>, Func=Eigen::internal::add_assign_op<double, double>]" 
+src/eigen3/Eigen/src/Core/CwiseBinaryOp.h(177): here
+            instantiation of "Derived &Eigen::MatrixBase<Derived>::operator+=(const Eigen::MatrixBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, OtherDerived=Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Eigen::Transpose<Eigen::Matrix<double, 2, 1, 0, 2, 1>>, 0>>]" 
+src/cudaMPM.cu(226): here
+
+src/eigen3/Eigen/src/Core/AssignEvaluator.h(836): warning: calling a __host__ function from a __host__ __device__ function is not allowed
+          detected during:
+            instantiation of "void Eigen::internal::call_assignment_no_alias(Dst &, const Src &, const Func &) [with Dst=Eigen::Matrix<double, 2, 2, 0, 2, 2>, Src=Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Eigen::Transpose<Eigen::Matrix<double, 2, 1, 0, 2, 1>>, 0>>, Func=Eigen::internal::assign_op<double, double>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(732): here
+            instantiation of "Derived &Eigen::PlainObjectBase<Derived>::_set_noalias(const Eigen::DenseBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, OtherDerived=Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Eigen::Transpose<Eigen::Matrix<double, 2, 1, 0, 2, 1>>, 0>>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(818): here
+            instantiation of "void Eigen::PlainObjectBase<Derived>::_init1<T,OtherDerived>(const Eigen::DenseBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, T=Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Eigen::Transpose<Eigen::Matrix<double, 2, 1, 0, 2, 1>>, 0>>, OtherDerived=Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Eigen::Transpose<Eigen::Matrix<double, 2, 1, 0, 2, 1>>, 0>>]" 
+src/eigen3/Eigen/src/Core/Matrix.h(294): here
+            instantiation of "Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>::Matrix(const T &) [with _Scalar=double, _Rows=2, _Cols=2, _Options=0, _MaxRows=2, _MaxCols=2, T=Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Eigen::Transpose<Eigen::Matrix<double, 2, 1, 0, 2, 1>>, 0>>]" 
+(796): here
+            instantiation of "void Eigen::internal::call_assignment(Dst &, const Src &, const Func &, Eigen::internal::enable_if<Eigen::internal::evaluator_assume_aliasing<Src, Eigen::internal::evaluator_traits<Src>::Shape>::value, void *>::type) [with Dst=Eigen::Matrix<double, 2, 2, 0, 2, 2>, Src=Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Eigen::Transpose<Eigen::Matrix<double, 2, 1, 0, 2, 1>>, 0>>, Func=Eigen::internal::add_assign_op<double, double>]" 
+src/eigen3/Eigen/src/Core/CwiseBinaryOp.h(177): here
+            instantiation of "Derived &Eigen::MatrixBase<Derived>::operator+=(const Eigen::MatrixBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, OtherDerived=Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Eigen::Transpose<Eigen::Matrix<double, 2, 1, 0, 2, 1>>, 0>>]" 
+src/cudaMPM.cu(226): here
+
+src/eigen3/Eigen/src/Core/AssignEvaluator.h(836): warning: calling a __host__ function from a __host__ __device__ function is not allowed
+          detected during:
+            instantiation of "void Eigen::internal::call_assignment_no_alias(Dst &, const Src &, const Func &) [with Dst=Eigen::Matrix<double, 2, 2, 0, 2, 2>, Src=Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_sum_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_identity_op<double>, Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Func=Eigen::internal::assign_op<double, double>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(732): here
+            instantiation of "Derived &Eigen::PlainObjectBase<Derived>::_set_noalias(const Eigen::DenseBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, OtherDerived=Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_sum_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_identity_op<double>, Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(537): here
+            instantiation of "Eigen::PlainObjectBase<Derived>::PlainObjectBase(const Eigen::DenseBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, OtherDerived=Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_sum_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_identity_op<double>, Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>]" 
+src/eigen3/Eigen/src/Core/Matrix.h(378): here
+            instantiation of "Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>::Matrix(const Eigen::EigenBase<OtherDerived> &) [with _Scalar=double, _Rows=2, _Cols=2, _Options=0, _MaxRows=2, _MaxCols=2, OtherDerived=Eigen::Product<Eigen::CwiseBinaryOp<Eigen::internal::scalar_sum_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_identity_op<double>, Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, double>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>, const Eigen::Matrix<double, 2, 2, 0, 2, 2>>>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>]" 
+src/cudaMPM.cu(237): here
+
+src/eigen3/Eigen/src/Core/AssignEvaluator.h(836): warning: calling a __host__ function from a __host__ __device__ function is not allowed
+          detected during:
+            instantiation of "void Eigen::internal::call_assignment_no_alias(Dst &, const Src &, const Func &) [with Dst=Eigen::Matrix<double, 2, 2, 0, 2, 2>, Src=Eigen::DiagonalWrapper<const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Func=Eigen::internal::assign_op<double, double>]" 
+(804): here
+            instantiation of "void Eigen::internal::call_assignment(Dst &, const Src &, const Func &, Eigen::internal::enable_if<<expression>, void *>::type) [with Dst=Eigen::Matrix<double, 2, 2, 0, 2, 2>, Src=Eigen::DiagonalWrapper<const Eigen::Matrix<double, 2, 1, 0, 2, 1>>, Func=Eigen::internal::assign_op<double, double>]" 
+(782): here
+            instantiation of "void Eigen::internal::call_assignment(Dst &, const Src &) [with Dst=Eigen::Matrix<double, 2, 2, 0, 2, 2>, Src=Eigen::DiagonalWrapper<const Eigen::Matrix<double, 2, 1, 0, 2, 1>>]" 
+src/eigen3/Eigen/src/Core/Assign.h(75): here
+            instantiation of "Derived &Eigen::MatrixBase<Derived>::operator=(const Eigen::EigenBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, OtherDerived=Eigen::DiagonalWrapper<const Eigen::Matrix<double, 2, 1, 0, 2, 1>>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(571): here
+            instantiation of "Derived &Eigen::PlainObjectBase<Derived>::operator=(const Eigen::EigenBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, OtherDerived=Eigen::DiagonalWrapper<const Eigen::Matrix<double, 2, 1, 0, 2, 1>>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(548): here
+            instantiation of "Eigen::PlainObjectBase<Derived>::PlainObjectBase(const Eigen::EigenBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, OtherDerived=Eigen::DiagonalWrapper<const Eigen::Matrix<double, 2, 1, 0, 2, 1>>]" 
+src/eigen3/Eigen/src/Core/Matrix.h(378): here
+            instantiation of "Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>::Matrix(const Eigen::EigenBase<OtherDerived> &) [with _Scalar=double, _Rows=2, _Cols=2, _Options=0, _MaxRows=2, _MaxCols=2, OtherDerived=Eigen::DiagonalWrapper<const Eigen::Matrix<double, 2, 1, 0, 2, 1>>]" 
+src/cudaMPM.cu(244): here
+
+src/eigen3/Eigen/src/Core/AssignEvaluator.h(836): warning: calling a __host__ function from a __host__ __device__ function is not allowed
+          detected during:
+            instantiation of "void Eigen::internal::call_assignment_no_alias(Dst &, const Src &, const Func &) [with Dst=Eigen::Matrix<double, 2, 2, 0, 2, 2>, Src=Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Func=Eigen::internal::assign_op<double, double>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(732): here
+            instantiation of "Derived &Eigen::PlainObjectBase<Derived>::_set_noalias(const Eigen::DenseBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, OtherDerived=Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(818): here
+            instantiation of "void Eigen::PlainObjectBase<Derived>::_init1<T,OtherDerived>(const Eigen::DenseBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, T=Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, OtherDerived=Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>]" 
+src/eigen3/Eigen/src/Core/Matrix.h(294): here
+            instantiation of "Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>::Matrix(const T &) [with _Scalar=double, _Rows=2, _Cols=2, _Options=0, _MaxRows=2, _MaxCols=2, T=Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>]" 
+src/eigen3/Eigen/src/Core/ProductEvaluators.h(472): here
+            instantiation of "Eigen::internal::product_evaluator<Eigen::Product<Lhs, Rhs, 1>, ProductTag, Eigen::DenseShape, Eigen::DenseShape, Eigen::internal::traits<Eigen::Product<Lhs, Rhs, 1>::Lhs>::Scalar, Eigen::internal::traits<Eigen::Product<Lhs, Rhs, 1>::Rhs>::Scalar>::product_evaluator(const Eigen::internal::product_evaluator<Eigen::Product<Lhs, Rhs, 1>, ProductTag, Eigen::DenseShape, Eigen::DenseShape, Eigen::internal::traits<Eigen::Product<Lhs, Rhs, 1>::Lhs>::Scalar, Eigen::internal::traits<Eigen::Product<Lhs, Rhs, 1>::Rhs>::Scalar>::XprType &) [with Lhs=Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Rhs=Eigen::Transpose<Eigen::Matrix<double, 2, 2, 0, 2, 2>>, ProductTag=3]" 
+src/eigen3/Eigen/src/Core/ProductEvaluators.h(35): here
+            [ 9 instantiation contexts not shown ]
+            instantiation of "Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>::Matrix(const T &) [with _Scalar=double, _Rows=2, _Cols=2, _Options=1, _MaxRows=2, _MaxCols=2, T=Eigen::Product<Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Eigen::Transpose<Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>]" 
+(796): here
+            instantiation of "void Eigen::internal::call_assignment(Dst &, const Src &, const Func &, Eigen::internal::enable_if<Eigen::internal::evaluator_assume_aliasing<Src, Eigen::internal::evaluator_traits<Src>::Shape>::value, void *>::type) [with Dst=Eigen::Matrix<double, 2, 2, 0, 2, 2>, Src=Eigen::Product<Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Eigen::Transpose<Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>, Func=Eigen::internal::assign_op<double, double>]" 
+(782): here
+            instantiation of "void Eigen::internal::call_assignment(Dst &, const Src &) [with Dst=Eigen::Matrix<double, 2, 2, 0, 2, 2>, Src=Eigen::Product<Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Eigen::Transpose<Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(714): here
+            instantiation of "Derived &Eigen::PlainObjectBase<Derived>::_set(const Eigen::DenseBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, OtherDerived=Eigen::Product<Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Eigen::Transpose<Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>]" 
+src/eigen3/Eigen/src/Core/Matrix.h(225): here
+            instantiation of "Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols> &Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>::operator=(const Eigen::DenseBase<OtherDerived> &) [with _Scalar=double, _Rows=2, _Cols=2, _Options=0, _MaxRows=2, _MaxCols=2, OtherDerived=Eigen::Product<Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Eigen::Transpose<Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>]" 
+src/cudaMPM.cu(247): here
+
+src/eigen3/Eigen/src/Core/AssignEvaluator.h(836): warning: calling a __host__ function from a __host__ __device__ function is not allowed
+          detected during:
+            instantiation of "void Eigen::internal::call_assignment_no_alias(Dst &, const Src &, const Func &) [with Dst=Eigen::Matrix<double, 2, 2, 1, 2, 2>, Src=Eigen::Product<Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Eigen::Transpose<Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>, Func=Eigen::internal::assign_op<double, double>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(732): here
+            instantiation of "Derived &Eigen::PlainObjectBase<Derived>::_set_noalias(const Eigen::DenseBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 1, 2, 2>, OtherDerived=Eigen::Product<Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Eigen::Transpose<Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(818): here
+            instantiation of "void Eigen::PlainObjectBase<Derived>::_init1<T,OtherDerived>(const Eigen::DenseBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 1, 2, 2>, T=Eigen::Product<Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Eigen::Transpose<Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>, OtherDerived=Eigen::Product<Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Eigen::Transpose<Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>]" 
+src/eigen3/Eigen/src/Core/Matrix.h(294): here
+            instantiation of "Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>::Matrix(const T &) [with _Scalar=double, _Rows=2, _Cols=2, _Options=1, _MaxRows=2, _MaxCols=2, T=Eigen::Product<Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Eigen::Transpose<Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>]" 
+(796): here
+            instantiation of "void Eigen::internal::call_assignment(Dst &, const Src &, const Func &, Eigen::internal::enable_if<Eigen::internal::evaluator_assume_aliasing<Src, Eigen::internal::evaluator_traits<Src>::Shape>::value, void *>::type) [with Dst=Eigen::Matrix<double, 2, 2, 0, 2, 2>, Src=Eigen::Product<Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Eigen::Transpose<Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>, Func=Eigen::internal::assign_op<double, double>]" 
+(782): here
+            instantiation of "void Eigen::internal::call_assignment(Dst &, const Src &) [with Dst=Eigen::Matrix<double, 2, 2, 0, 2, 2>, Src=Eigen::Product<Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Eigen::Transpose<Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>]" 
+src/eigen3/Eigen/src/Core/PlainObjectBase.h(714): here
+            instantiation of "Derived &Eigen::PlainObjectBase<Derived>::_set(const Eigen::DenseBase<OtherDerived> &) [with Derived=Eigen::Matrix<double, 2, 2, 0, 2, 2>, OtherDerived=Eigen::Product<Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Eigen::Transpose<Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>]" 
+src/eigen3/Eigen/src/Core/Matrix.h(225): here
+            instantiation of "Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols> &Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>::operator=(const Eigen::DenseBase<OtherDerived> &) [with _Scalar=double, _Rows=2, _Cols=2, _Options=0, _MaxRows=2, _MaxCols=2, OtherDerived=Eigen::Product<Eigen::Product<Eigen::Matrix<double, 2, 2, 0, 2, 2>, Eigen::Matrix<double, 2, 2, 0, 2, 2>, 0>, Eigen::Transpose<Eigen::Matrix<double, 2, 2, 0, 2, 2>>, 0>]" 
+src/cudaMPM.cu(247): here
+
+In file included from src/eigen3/Eigen/Core:257:0,
+                 from src/eigen3/Eigen/Dense:1,
+                 from src/cudaMPM.cu:16:
+/usr/local/depot/cuda/bin/../targets/x86_64-linux/include/host_defines.h:54:2: warning: #warning "host_defines.h is an internal header file and must not be used directly.  This file will be removed in a future CUDA release.  Please use cuda_runtime_api.h or cuda_runtime.h instead." [-Wcpp]
+ #warning "host_defines.h is an internal header file and must not be used directly.  This file will be removed in a future CUDA release.  Please use cuda_runtime_api.h or cuda_runtime.h instead."
+  ^
+g++ -fopenmp -std=c++11 -O3 -Wall -Wno-deprecated -Werror -pedantic -L/usr/local/depot/cuda-10.2/lib64/ -lcudart -DNDEBUG obj/main.o obj/cudaMPM.o -lglut -lGL -lX11 -o mpm
+obj/main.o: In function `InitMPM()':
+main.cpp:(.text+0x71e1): undefined reference to `cudaMPM::NUM_PARTICLES'
+obj/cudaMPM.o: In function `cudaMPM::Update()':
+tmpxft_00006824_00000000-5_cudaMPM.cudafe1.cpp:(.text+0x24c): undefined reference to `cudaMPM::NUM_PARTICLES'
+tmpxft_00006824_00000000-5_cudaMPM.cudafe1.cpp:(.text+0x327): undefined reference to `cudaMPM::NUM_PARTICLES'
+obj/cudaMPM.o: In function `cudaMPM::cudaMPM()':
+tmpxft_00006824_00000000-5_cudaMPM.cudafe1.cpp:(.text+0x65c): undefined reference to `cudaMPM::NUM_PARTICLES'
+obj/cudaMPM.o: In function `cudaMPM::addParticles(double, double)':
+tmpxft_00006824_00000000-5_cudaMPM.cudafe1.cpp:(.text+0xa47): undefined reference to `cudaMPM::NUM_PARTICLES'
+obj/cudaMPM.o:tmpxft_00006824_00000000-5_cudaMPM.cudafe1.cpp:(.text+0xab5): more undefined references to `cudaMPM::NUM_PARTICLES' follow
+collect2: error: ld returned 1 exit status
+make: *** [mpm] Error 1

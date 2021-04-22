@@ -25,8 +25,8 @@ using namespace Eigen;
 #define BLOCKSIDE 32
 #define BLOCKSIZE ((BLOCKSIDE) * (BLOCKSIDE))
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+//#define STB_IMAGE_WRITE_IMPLEMENTATION
+//#include "stb_image_write.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -55,7 +55,6 @@ using namespace Eigen;
 #define MU_0 E / (2 * (1 + NU))
 #define LAMBDA_0 (E * NU) / ((1 + NU) * (1 - 2 * NU))
 
-
 // Params we need outside of kernels or that need to be modified
 struct GlobalConstants {
 	int NUM_PARTICLES;					// keeps track of current number of particles
@@ -75,7 +74,7 @@ void cudaMPM::addParticles(double xcenter, double ycenter)
 	for (int i = 0; i < BLOCK_PARTICLES; i++) {
 		particles.push_back(cudaMPM::Particle((((double)rand() / (double)RAND_MAX) * 2 - 1) * 0.08 + xcenter, (((double)rand() / (double)RAND_MAX) * 2 - 1) * 0.08 + ycenter));
 	}
-	NUM_PARTICLES += BLOCK_PARTICLES;
+	params.NUM_PARTICLES += BLOCK_PARTICLES;
 }
 
 // GPU function
@@ -109,11 +108,11 @@ __global__ void P2G(void)
 		double lambda = LAMBDA_0 * e;
 
 		// Current volume
-		double J = p.F.determinant();
+		double J = 0; // p.F.determinant(); // TODO: determinant
 
 		// Polar decomposition for fixed corotated model, https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf paragraph after Eqn. 45
-		JacobiSVD<Matrix2d> svd(p.F, ComputeFullU | ComputeFullV);
-		Matrix2d r = svd.matrixU() * svd.matrixV().transpose();
+		//JacobiSVD<Matrix2d> svd(p.F, ComputeFullU | ComputeFullV); // TODO: JacobiSVD
+		Matrix2d r(2, 2); //= svd.matrixU() * svd.matrixV().transpose(); // TODO: related to above
 		//Matrix2d s = svd.matrixV() * svd.singularValues().asDiagonal() * svd.matrixV().transpose();
 
 		// [https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf Paragraph after Eqn. 176]
@@ -236,17 +235,17 @@ __global__ void G2P(void)
 		// MLS-MPM F-update eqn 17
 		Matrix2d F = (Matrix2d::Identity() + DT * p.C) * p.F;
 
-		JacobiSVD<Matrix2d> svd(F, ComputeFullU | ComputeFullV);
-		Matrix2d svd_u = svd.matrixU();
-		Matrix2d svd_v = svd.matrixV();
+		//JacobiSVD<Matrix2d> svd(F, ComputeFullU | ComputeFullV); // TODO: JacobiSVD
+		Matrix2d svd_u(2, 2); //svd.matrixU(); // TODO: ^
+		Matrix2d svd_v(2, 2); //svd.matrixV(); // TODO: ^
+                Vector2d sigvalues(2); //svd.singularValues().array().min(1.0f + 7.5e-3).max(1.0 - 2.5e-2); // TODO; may not need
 		// Snow Plasticity
-		Vector2d sigvalues = svd.singularValues().array().min(1.0f + 7.5e-3).max(1.0 - 2.5e-2);
 		Matrix2d sig = sigvalues.asDiagonal();
 
-		double oldJ = F.determinant();
+		double oldJ = 0; //F.determinant(); // TODO: determinant
 		F = svd_u * sig * svd_v.transpose();
 
-		double Jp_new = min(max(p.Jp * oldJ / F.determinant(), 0.6), 20.0);
+		double Jp_new = 0; //min(max(p.Jp * oldJ / F.determinant(), 0.6), 20.0); // TODO: determinant
 
 		p.Jp = Jp_new;
 		p.F = F;
@@ -258,7 +257,7 @@ void cudaMPM::Update(void)
 {
 	dim3 blockDim(BLOCKSIZE, 1);
 	dim3 gridDim(
-		(NUM_PARTICLES + blockDim.x - 1) / blockDim.x,
+		(params.NUM_PARTICLES + blockDim.x - 1) / blockDim.x,
 		(1 + blockDim.y - 1) / blockDim.y
 	);
 	dim3 blockDimG(BLOCKSIDE, BLOCKSIDE);
@@ -284,7 +283,7 @@ void cudaMPM::Update(void)
 	cudaMemcpy(
                 &particles[0], 
                 &cudaDeviceParticles[0], 
-                sizeof(cudaMPM::Particle) * NUM_PARTICLES, 
+                sizeof(cudaMPM::Particle) * params.NUM_PARTICLES, 
                 cudaMemcpyDeviceToHost
         );
         // copy grid data back to CPU
@@ -299,7 +298,7 @@ void cudaMPM::Update(void)
 // CPU
 cudaMPM::cudaMPM() {
         // CPU grid
-	NUM_PARTICLES = 0;
+	params.NUM_PARTICLES = 0;
 	for (int i = 0; i < GRID_RES; i++){
 		grid[i] = (Vector3d*)malloc(GRID_RES * sizeof(Vector3d));
 	}
@@ -316,7 +315,7 @@ void cudaMPM::setup(void)
         // GPU memory
 	cudaMalloc(
                 (void**)&*cudaDeviceParticles.begin(), 
-                sizeof(cudaMPM::Particle) * NUM_PARTICLES
+                sizeof(cudaMPM::Particle) * params.NUM_PARTICLES
         );
 	cudaMalloc(
                 (void**)&cudaDeviceGrid, 
@@ -327,7 +326,7 @@ void cudaMPM::setup(void)
 	cudaMemcpy(
                 &cudaDeviceParticles[0], 
                 &particles[0], 
-                sizeof(cudaMPM::Particle) * NUM_PARTICLES, 
+                sizeof(cudaMPM::Particle) * params.NUM_PARTICLES, 
                 cudaMemcpyHostToDevice
         );
 
@@ -341,7 +340,8 @@ void cudaMPM::setup(void)
                 );
 	}
 
-	params.NUM_PARTICLES = NUM_PARTICLES;
+	cout << "initializing mpm with " << params.NUM_PARTICLES/3 << " particles" << endl;
+
 	params.particles = &cudaDeviceParticles[0];
 	params.grid = cudaDeviceGrid;
 

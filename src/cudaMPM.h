@@ -3,7 +3,6 @@ using namespace Eigen;
 
 class cudaMPM {
 public:
-	static int NUM_PARTICLES;
 	const static int GRID_RES = 80;
 
 	// Particle representation
