@@ -83,17 +83,132 @@ __device__ double determinant(Matrix2d M) {
         return M(0,0) * M(1,1) - M(0,1) * M(1,0);
 }
 
+struct NullResults {
+        Matrix2Xd kernel;
+};
+
+struct EigenResults {
+        Matrix2Xd eigenvectors;
+        Vector2d eigenvalues; // may have 0's
+        int rank;
+};
+
 struct SVDResults {
-        Matrix2d U;
         Matrix2d V;
+        Matrix2d U;
         Matrix2d singularValues;
 };
 
+// normalized kernel
+__device__ void SolveNull(Matrix2d M, NullResults * const &R) {
+        double a = M(0, 0);
+        double b = M(0, 1);
+        double c = M(1, 0);
+        double d = M(1, 1);
+
+        if (a == 0 && b == 0 && c == 0 && d == 0) {
+                R->kernel = Matrix2d::Identity(); // full nullity
+        }
+        else if (b == 0 && d == 0) { // one of a or c is non-zero
+                R->kernel = MatrixXd(2, 1);
+                R->kernel.col(0) << 0, 1;
+        }
+        else if (a == 0 && c == 0) { // one of b or d is non-zero
+                R->kernel = MatrixXd(2, 1);
+                R->kernel.col(0) << 1, 0;
+        }
+        else if (c == 0 && d == 0) { // a and b are non-zero
+                R->kernel = MatrixXd(2, 1);
+                R->kernel.col(0) << -b/a, 1;
+                R->kernel.col(0).normalize();
+        }
+        else if (a == 0 && b == 0) {
+                R->kernel = MatrixXd(2, 1);
+                R->kernel.col(0) << -d/c, 1;
+                R->kernel.col(0).normalize();
+        }
+        else if (a != 0 && b != 0 && c != 0 && d != 0) { // all 4 non-zero
+                R->kernel = MatrixXd(2, 1);
+                if (b/a == d/c) {
+                        R->kernel.col(0) << -b/a, 1;
+                }
+                else {
+                        R->kernel.col(0) << 1/(-c * b/a + d), 1/(c - d * a/b);
+                }
+                R->kernel.col(0).normalize();
+        }
+        else { // 3 are non-zero
+                R->kernel = MatrixXd(0, 0); // full rank
+        }
+}
+
+// assume square
+// normalized eigenvectors
+__device__ void SolveEigen(Matrix2d M, EigenResults * const &R) {
+        // solve for eigenvalues: 
+        // quadratic formula, det(M - lambda * I) = 0 for 2x2
+        double a = M(0, 0);
+        double b = M(0, 1);
+        double c = M(1, 0);
+        double d = M(1, 1);
+        double part1 = a + d;
+        double part2 = sqrt(a * a + d * d - 2 * a * d + 4 * b * c);
+        double e1 = (part1 + part2) / 2;
+        double e2 = (part1 - part2) / 2;
+
+        R->eigenvalues = Vector2d();
+        R->rank = 0;
+        if (e1 != 0) {
+                R->eigenvalues(R->rank) = e1;
+                R->rank += 1;
+        }
+        if (e2 != 0) {
+                R->eigenvalues(R->rank) = e2;
+                R->rank += 1;
+        }
+
+        // solve for corresponding eigenvectors -> eigenspace...
+        // kernel of M - lambda * I
+        R->eigenvectors = MatrixXd();
+        Matrix2d I = Matrix2d::Identity();
+        NullResults N;
+        for (int i = 0; i < R->rank; i++) {
+                SolveNull(M - R->eigenvalues(i) * I, &N);
+                R->eigenvectors.conservativeResize(
+                        NoChange, R->eigenvectors.cols() + 1
+                );
+                R->eigenvectors.col(i) = N.kernel.col(0);
+
+                // case where eigenspace is rank 2
+                if (N.kernel.cols() == 2) {
+                        assert(i == 0);
+                        R->eigenvectors.col(1) = N.kernel.col(1);
+                        break; // we are done
+                }
+        }
+}
+
 __device__ void SolveJacobiSVD(Matrix2d M, SVDResults * const &R) {
-       // TODO
-       R->U = M; 
-       R->V = M; 
-       R->singularValues = M; 
+       R->V = Matrix2d();
+       R->U = Matrix2d();
+       R->singularValues = Matrix2d();
+
+       Matrix2d A = M * M.transpose();
+       EigenResults Ev;
+       SolveEigen(A, &Ev);
+       R->V << Ev.eigenvectors;
+
+       Matrix2d B = M * R->V;
+       EigenResults Eu;
+       SolveEigen(B, &Eu);
+       R->U << Eu.eigenvectors;
+       R->singularValues << Matrix2d(Eu.eigenvalues.asDiagonal()); // eigenvalues may be 0
+
+       if (Eu.rank < 2) {
+               NullResults N;
+               SolveNull(M.transpose(), &N);
+               R->U << N.kernel; // col-concatenation
+       }
 }
 
 // GPU function
@@ -261,7 +376,7 @@ __global__ void G2P(void)
 		Matrix2d svd_v = R.V; //svd.matrixV(); // TODO: ^
                 //Vector2d sigvalues(2); //svd.singularValues().array().min(1.0f + 7.5e-3).max(1.0 - 2.5e-2); // TODO; may not need
 		// Snow Plasticity
-                Matrix2d sig = R.singularValues; //Matrix sig = sigvalues.asDiagonal(); TODO
+                Matrix2d sig = R.singularValues; //Matrix2d sig = sigvalues.asDiagonal(); TODO
 
 		double oldJ = determinant(F); // TODO: determinant
 		F = svd_u * sig * svd_v.transpose();
