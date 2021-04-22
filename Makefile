@@ -31,7 +31,7 @@ LFLAGS = -std=c++11 -O3 -Wall -Wno-deprecated -Werror -pedantic $(LIBRARY_PATH) 
 LIBS = $(OPENGL_LIBS)
 NVCCFLAGS = -O3 --gpu-architecture compute_61 -ccbin /usr/bin/gcc
 
-OBJS = $(OBJDIR)/main.o $(OBJDIR)/cudaMPM.o
+OBJS = $(OBJDIR)/main.o $(OBJDIR)/cudaMPM.o $(OBJDIR)/helper.o
 
 default: $(TARGET)
 
@@ -43,6 +43,10 @@ $(TARGET): $(OBJS)
 $(OBJDIR)/main.o: $(SRCDIR)/main.cpp
 	mkdir -p $(OBJDIR)
 	$(CC) $(OMP) $(CFLAGS) -c $(SRCDIR)/main.cpp -o $(OBJDIR)/main.o
+
+$(OBJDIR)/helper.o: $(SRCDIR)/helper.cu
+	mkdir -p $(OBJDIR)
+	$(NVCC) $(NVCCFLAGS) -c $(SRCDIR)/helper.cu -o $(OBJDIR)/helper.o
 
 $(OBJDIR)/cudaMPM.o: $(SRCDIR)/cudaMPM.cu
 	mkdir -p $(OBJDIR)
