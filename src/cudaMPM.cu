@@ -244,8 +244,8 @@ __global__ void G2P(void)
 		Matrix2d svd_v = R->V;
 		// Snow Plasticity
         Matrix2d sig = R->singularValues;
-		sig(0, 0) = clamp(sig(0, 0), 1.0 - 2.5e-2, 1.0 + 7.5e-3);
-		sig(1, 1) = clamp(sig(1, 1), 1.0 - 2.5e-2, 1.0 + 7.5e-3);
+		sig(0, 0) = min(max(sig(0, 0), 1.0 - 2.5e-2), 1.0 + 7.5e-3);
+		sig(1, 1) = min(max(sig(1, 1), 1.0 - 2.5e-2), 1.0 + 7.5e-3);
 
 		double oldJ = determinant(F);
 		F = svd_u * sig * svd_v.transpose();
