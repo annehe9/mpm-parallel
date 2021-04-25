@@ -22,11 +22,10 @@ using namespace Eigen;
 
 #include <pthread.h>
 #include <omp.h>
+#include "helper.h"
 
 int NCORES = omp_get_num_procs();
 int MAX_NTHREADS = omp_get_max_threads();
-
-int iteration = 0;
 
 // References:
 // https://github.com/yuanming-hu/taichi_mpm/blob/master/mls-mpm88-explained.cpp
@@ -40,17 +39,6 @@ struct Particle
 	Matrix2d F, C; //deformation gradient, APIC momentum
 	double Jp; //determinant of deformation gradient, which is volume
 };
-
-// Grid representation
-/*
-struct Cell
-{
-	Cell() : v(0.f, 0.f), mass(0.f) {}
-	Vector2f v;
-	double mass;
-
-};
-*/
 
 // Granularity
 const static int MAX_PARTICLES = 2500;
@@ -82,8 +70,14 @@ const static double LAMBDA_0 = (E * NU) / ((1 + NU) * (1 - 2 * NU));
 // Render params
 const static int WINDOW_WIDTH = 800;
 const static int WINDOW_HEIGHT = 600;
-const static double VIEW_WIDTH = 1.5 * 800;
-const static double VIEW_HEIGHT = 1.5 * 600;
+//const static double VIEW_WIDTH = 1.5 * 800;
+//const static double VIEW_HEIGHT = 1.5 * 600;
+
+int iterations = 20000;
+double totalTime = 0;
+double avgP2G = 0;
+double avgGrid = 0;
+double avgG2P = 0;
 
 // yay add more particles randomly in a square
 void addParticles(double xcenter, double ycenter)
@@ -104,8 +98,7 @@ void InitMPM(void)
 
 void P2G_iteration(Particle p) {
 
-        JacobiSVD<Matrix2d> svd; 
-        Matrix2d r, PF_0, PF_1, PF, stress, affine;
+        Matrix2d PF_0, PF_1, PF, stress, affine;
         Vector3d mass_x_velocity;
         Vector2i base_coord;
         Vector2d fx, tmpa, tmpb, tmpc, dpos, tmp, w[3];
@@ -134,12 +127,13 @@ void P2G_iteration(Particle p) {
         lambda = LAMBDA_0 * e;
 
         // Current volume
-        J = p.F.determinant();
+        J = determinant(p.F);
 
         // Polar decomposition for fixed corotated model
-        svd = JacobiSVD<Matrix2d>(p.F, ComputeFullU | ComputeFullV);
-        r = svd.matrixU() * svd.matrixV().transpose();
-        //Matrix2d s = svd.matrixV() * svd.singularValues().asDiagonal() * svd.matrixV().transpose();
+        SVDResults *R = (SVDResults *) malloc(sizeof(SVDResults));
+        SolveJacobiSVD(p.F, R);
+	Matrix2d r = R->U * R->V.transpose();
+	Matrix2d s = R->V * R->singularValues * R->V.transpose();
 
         // [http://mpm.graphics Paragraph after Eqn. 176]
         Dinv = 4 * INV_DX * INV_DX;
@@ -270,18 +264,19 @@ void G2P_iteration(Particle p) {
         // MLS-MPM F-update eqn 17
         Matrix2d F = (Matrix2d::Identity() + DT * p.C) * p.F;
 
-        JacobiSVD<Matrix2d> svd(F, ComputeFullU | ComputeFullV);
-        Matrix2d svd_u = svd.matrixU();
-        Matrix2d svd_v = svd.matrixV();
-        Matrix2d sig = svd.singularValues().asDiagonal();
-
+        SVDResults* R = (SVDResults*)malloc(sizeof(SVDResults));
+        SolveJacobiSVD(F, R);
+        Matrix2d svd_u = R->U;
+        Matrix2d svd_v = R->V;
         // Snow Plasticity
-        sig = sig.array().min(1.0f + 7.5e-3).max(1.0 - 2.5e-2);
+        Matrix2d sig = R->singularValues;
+        sig(0, 0) = min(max(sig(0, 0), 1.0 - 2.5e-2), 1.0 + 7.5e-3);
+        sig(1, 1) = min(max(sig(1, 1), 1.0 - 2.5e-2), 1.0 + 7.5e-3);
 
-        double oldJ = F.determinant();
+        double oldJ = determinant(F);
         F = svd_u * sig * svd_v.transpose();
 
-        double Jp_new = min(max(p.Jp * oldJ / F.determinant(), 0.6), 20.0);
+        double Jp_new = min(max(p.Jp * oldJ / determinant(F), 0.6), 20.0);
 
         p.Jp = Jp_new;
         p.F = F;
@@ -316,13 +311,14 @@ void Update(void)
                 get_ms(t3) - get_ms(t2),                
                 get_ms(t4) - get_ms(t3) 
         );
-	glutPostRedisplay();
-
-        printf("Iteration: %d\n", iteration);
-        iteration += 1;
+        totalTime += get_ms(t4) - get_ms(t1);
+        avgP2G += get_ms(t2) - get_ms(t1);
+        avgGrid += get_ms(t3) - get_ms(t2);
+        avgG2P += get_ms(t4) - get_ms(t3);
+	//glutPostRedisplay();
 }
 
-
+/*
 //Rendering
 void InitGL(void)
 {
@@ -368,6 +364,7 @@ void Keyboard(unsigned char c, __attribute__((unused)) int x, __attribute__((unu
 		break;
 	}
 }
+*/
 
 int main(int argc, char** argv)
 {
@@ -383,16 +380,22 @@ int main(int argc, char** argv)
         Eigen::initParallel();
         //Eigen::setNbThreads(n);
 
-	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
-	glutInit(&argc, argv);
-	glutCreateWindow("MPM");
-	glutDisplayFunc(Render);
-	glutIdleFunc(Update);
-	glutKeyboardFunc(Keyboard);
+	//glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+	//glutInit(&argc, argv);
+	//glutCreateWindow("MPM");
+	//glutDisplayFunc(Render);
+	//glutIdleFunc(Update);
+	//glutKeyboardFunc(Keyboard);
 
-	InitGL();
+	//InitGL();
 	InitMPM();
-
-	glutMainLoop();
+    for (int i = 0; i < iterations; i++) {
+        Update();
+        printf("Iteration: %d\n", i);
+    }
+    printf("Benchmark over %d iterations\n", iterations);
+    printf("Total time: %.3f\nAverage time per iteration: %.3f\nAverage time for P2G: %.3f\nAverage time for grid update: %.3f\nAverage time for G2P: %.3f\n", 
+        totalTime, totalTime / iterations, avgP2G / iterations, avgGrid / iterations, avgG2P / iterations);
+	//glutMainLoop();
 	return 0;
 }

@@ -23,13 +23,13 @@ LD = g++
 OBJDIR = obj
 SRCDIR = src
 
-CFLAGS = -std=c++11 -pedantic -Wno-deprecated -Wall -Wextra -O3 -DNDEBUG
+CFLAGS = -std=c++0x -pedantic -Wno-deprecated -Wall -Wextra -O3 -DNDEBUG
 CFLAGS += $(INCLUDE_PATH) -I./include -I./$(SRCDIR)
 OMP = -fopenmp
-LFLAGS = -std=c++11 -O3 -Wall -Wno-deprecated -Werror -pedantic $(LIBRARY_PATH) -DNDEBUG
+LFLAGS = -std=c++0x -O3 -Wall -Wno-deprecated -Werror -pedantic $(LIBRARY_PATH) -DNDEBUG
 LIBS = $(OPENGL_LIBS)
 
-OBJS = $(OBJDIR)/main.o
+OBJS = $(OBJDIR)/main.o $(OBJDIR)/helper.o
 
 default: $(TARGET)
 
@@ -41,6 +41,10 @@ $(TARGET): $(OBJS)
 $(OBJDIR)/main.o: $(SRCDIR)/main.cpp
 	mkdir -p $(OBJDIR)
 	$(CC) $(OMP) $(CFLAGS) -c $(SRCDIR)/main.cpp -o $(OBJDIR)/main.o
+
+$(OBJDIR)/helper.o: $(SRCDIR)/helper.cpp
+	mkdir -p $(OBJDIR)
+	$(CC) $(OMP) $(CFLAGS) -c $(SRCDIR)/helper.cpp -o $(OBJDIR)/helper.o
 
 clean:
 	rm -f $(OBJS)
