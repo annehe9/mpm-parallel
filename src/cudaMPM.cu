@@ -113,8 +113,8 @@ __global__ void P2G(void)
 		double J = determinant(p.F);
 
 		// Polar decomposition for fixed corotated model, https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf paragraph after Eqn. 45
-                SVDResults *R = (SVDResults *) malloc(sizeof(SVDResults));
-                SolveJacobiSVD(p.F, R);
+        SVDResults *R = (SVDResults *) malloc(sizeof(SVDResults));
+        SolveJacobiSVD(p.F, R);
 		Matrix2d r = R->U * R->V.transpose();
 		Matrix2d s = R->V * R->singularValues * R->V.transpose();
 
@@ -238,17 +238,19 @@ __global__ void G2P(void)
 		// MLS-MPM F-update eqn 17
 		Matrix2d F = (Matrix2d::Identity() + DT * p.C) * p.F;
 
-                SVDResults *R = (SVDResults *) malloc(sizeof(SVDResults));
+        SVDResults *R = (SVDResults *) malloc(sizeof(SVDResults));
 		SolveJacobiSVD(F, R);
 		Matrix2d svd_u = R->U;
 		Matrix2d svd_v = R->V;
 		// Snow Plasticity
-                Matrix2d sig = R->singularValues;
+        Matrix2d sig = R->singularValues;
+		sig(0, 0) = clamp(sig(0, 0), 1.0 - 2.5e-2, 1.0 + 7.5e-3);
+		sig(1, 1) = clamp(sig(1, 1), 1.0 - 2.5e-2, 1.0 + 7.5e-3);
 
 		double oldJ = determinant(F);
 		F = svd_u * sig * svd_v.transpose();
 
-		double Jp_new = 0; min(max(p.Jp * oldJ / determinant(F), 0.6), 20.0);
+		double Jp_new = min(max(p.Jp * oldJ / determinant(F), 0.6), 20.0);
 
 		p.Jp = Jp_new;
 		p.F = F;
