@@ -1,9 +1,12 @@
 #include "eigen3/Eigen/Dense"
 using namespace Eigen;
 
+#define MAX_PARTICLES 100000
+
 class cudaMPM {
 public:
 	const static int GRID_RES = 80;
+        int NUM_PARTICLES;
 
 	// Particle representation
 	struct Particle
@@ -14,14 +17,14 @@ public:
 		double Jp; //determinant of deformation gradient, which is volume
 	};
 
+	Particle *particles;//vector<Particle> *particles;
+	Vector3d *grid;
+
+	Particle *cudaDeviceParticles;
+	Vector3d *cudaDeviceGrid;
+
 	cudaMPM();
 	void setup();
 	void addParticles(double xcenter, double ycenter);
 	void Update(void);
-
-	vector<Particle> particles;
-	Vector3d* grid[];
-
-	vector<Particle> cudaDeviceParticles;
-	Vector3d* cudaDeviceGrid[];
 };

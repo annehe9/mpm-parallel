@@ -62,7 +62,7 @@ struct GlobalConstants {
 	// Data structures
 	cudaMPM::Particle* particles;
 	// Vector3: [velocity_x, velocity_y, mass]
-	Vector3d** grid;
+	Vector3d* grid;
 };
 
 GlobalConstants params;
@@ -73,9 +73,13 @@ __constant__ GlobalConstants cuConstParams;
 void cudaMPM::addParticles(double xcenter, double ycenter)
 {
 	for (int i = 0; i < BLOCK_PARTICLES; i++) {
-		particles.push_back(cudaMPM::Particle((((double)rand() / (double)RAND_MAX) * 2 - 1) * 0.08 + xcenter, (((double)rand() / (double)RAND_MAX) * 2 - 1) * 0.08 + ycenter));
+                particles[i + NUM_PARTICLES] = 
+                        cudaMPM::Particle((((double)rand() / 
+                        (double)RAND_MAX) * 2 - 1) * 0.08 + xcenter, 
+                        (((double)rand() / (double)RAND_MAX) * 2 - 1) 
+                        * 0.08 + ycenter);
 	}
-	params.NUM_PARTICLES += BLOCK_PARTICLES;
+	NUM_PARTICLES += BLOCK_PARTICLES;
 }
 
 
@@ -143,10 +147,11 @@ __global__ void P2G(void)
 				// Translational momentum
 				Vector3d mass_x_velocity(p.v.x() * MASS, p.v.y() * MASS, MASS);
 				Vector2d tmp = affine * dpos;
-				*(Vector3d*)(&cuConstParams.grid[base_coord.x() + i][base_coord.y() + j]) 
-                                        += (
-					        w[i].x() * w[j].y() * (mass_x_velocity + Vector3d(tmp.x(), tmp.y(), 0))
-					);
+				*(Vector3d*)(&cuConstParams.grid[
+                                        (base_coord.x() + i) * GRID_RES + (base_coord.y() + j)
+                                ]) += (
+                                        w[i].x() * w[j].y() * (mass_x_velocity + Vector3d(tmp.x(), tmp.y(), 0))
+                                );
 			}
 		}
 	}
@@ -159,7 +164,7 @@ __global__ void UpdateGridVelocity(void) {
 		int index = blockIdx.x * blockDim.x + threadIdx.x + i;
 		int i = index / GRID_RES;
 		int j = index % GRID_RES;
-		Vector3d& g = cuConstParams.grid[i][j];
+		Vector3d& g = cuConstParams.grid[i * GRID_RES + j];
 		if (g[2] > 0) {
 			// Normalize by mass
 			g /= g[2];
@@ -219,7 +224,9 @@ __global__ void G2P(void)
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < 3; j++) {
 				Vector2d dpos = (Vector2d(i, j) - fx);
-				Vector3d curr = cuConstParams.grid[base_coord.x() + i][base_coord.y() + j];
+				Vector3d curr = cuConstParams.grid[
+                                        (base_coord.x() + i) * GRID_RES + (base_coord.y() + j)
+                                ];
 				Vector2d grid_v(curr.x(), curr.y());
 				double weight = w[i].x() * w[j].y();
 				// Velocity
@@ -232,8 +239,6 @@ __global__ void G2P(void)
 		// Advection
 		//double tempy = p.x.y();
 		p.x += DT * p.v;
-		//cout << "change" << tempy - p.x.y() << endl;
-		//cout << "velocity " <<  p.v << endl;
 
 		// MLS-MPM F-update eqn 17
 		Matrix2d F = (Matrix2d::Identity() + DT * p.C) * p.F;
@@ -252,6 +257,12 @@ __global__ void G2P(void)
 
 		p.Jp = Jp_new;
 		p.F = F;
+
+                /*
+                if (index == 0) {
+                        printf("Particle 0 pos (GPU): %f %f\n", p.x[0], p.x[1]);
+                }
+                */
 	}
 }
 
@@ -260,7 +271,7 @@ void cudaMPM::Update(void)
 {
 	dim3 blockDim(BLOCKSIZE, 1);
 	dim3 gridDim(
-		(params.NUM_PARTICLES + blockDim.x - 1) / blockDim.x,
+		(NUM_PARTICLES + blockDim.x - 1) / blockDim.x,
 		(1 + blockDim.y - 1) / blockDim.y
 	);
 	dim3 blockDimG(BLOCKSIDE, BLOCKSIDE);
@@ -270,11 +281,11 @@ void cudaMPM::Update(void)
 	);
 
         // 0 out CPU and GPU grids
-	memset(grid, 0, sizeof(grid));
+	//memset(grid, 0, sizeof(grid));
 	cudaMemset(
                 cudaDeviceGrid, 
                 0, 
-                (GRID_RES) * (GRID_RES) * sizeof(Vector3d)
+                sizeof(Vector3d) * (GRID_RES) * (GRID_RES)
         );
         // use same particle data on GPU as from before
 
@@ -284,9 +295,9 @@ void cudaMPM::Update(void)
 
         // copy particle/grid data back to CPU
 	cudaMemcpy(
-                &particles[0], 
-                &cudaDeviceParticles[0], 
-                sizeof(cudaMPM::Particle) * params.NUM_PARTICLES, 
+                (void**)particles,
+                (void**)&cudaDeviceParticles,
+                sizeof(cudaMPM::Particle) * NUM_PARTICLES, 
                 cudaMemcpyDeviceToHost
         );
         // copy grid data back to CPU
@@ -296,56 +307,59 @@ void cudaMPM::Update(void)
                 sizeof(Vector3d) * (GRID_RES) * (GRID_RES), 
                 cudaMemcpyDeviceToHost
         );
+
+        //cout << "Particle 0 pos: " << particles[0].x << endl;
 }
 
 // CPU
 cudaMPM::cudaMPM() {
-        // CPU grid
-	params.NUM_PARTICLES = 0;
-	for (int i = 0; i < GRID_RES; i++){
-		grid[i] = (Vector3d*)malloc(GRID_RES * sizeof(Vector3d));
-	}
+	NUM_PARTICLES = 0;
+
+        particles = (Particle *) malloc(sizeof(Particle) * MAX_PARTICLES);
+        grid = (Vector3d *) malloc(sizeof(Vector3d *) * GRID_RES * GRID_RES);
 }
 
 // CPU, prep GPU
 void cudaMPM::setup(void)
 {
+
         // CPU particles
 	addParticles(0.55, 0.45);
 	addParticles(0.45, 0.65);
 	addParticles(0.55, 0.85);
 
+	cout << "initializing mpm with " << NUM_PARTICLES / 3 << " particles" << endl;
+
         // GPU memory
 	cudaMalloc(
-                (void**)&*cudaDeviceParticles.begin(), 
-                sizeof(cudaMPM::Particle) * params.NUM_PARTICLES
+                (void**)cudaDeviceParticles, 
+                sizeof(cudaMPM::Particle) * NUM_PARTICLES
         );
+        cout << "grid mem " << sizeof(Vector3d) << endl;
+        //cout << "grid mem " << sizeof(Vector3d) * GRID_RES * GRID_RES << endl; 
+        /*
 	cudaMalloc(
-                (void**)&cudaDeviceGrid, 
-                sizeof(double) * 3 * (GRID_RES) * (GRID_RES)
+                (void**)cudaDeviceGrid, 
+                sizeof(Vector3d) * (GRID_RES) * (GRID_RES)
         );
 
         // copy initial set of particles, CPU->GPU 
 	cudaMemcpy(
-                &cudaDeviceParticles[0], 
-                &particles[0], 
-                sizeof(cudaMPM::Particle) * params.NUM_PARTICLES, 
+                (void**)cudaDeviceParticles,
+                (void**)particles,
+                sizeof(cudaMPM::Particle) * NUM_PARTICLES, 
+                cudaMemcpyHostToDevice
+        );
+        // copy initial grid, CPU -> GPU
+        cudaMemcpy(
+                cudaDeviceGrid,
+                grid,
+                sizeof(Vector3d) * GRID_RES * GRID_RES,
                 cudaMemcpyHostToDevice
         );
 
-        // copy initial grid, CPU -> GPU
-	for (int i = 0; i < GRID_RES; i++){
-		cudaMemcpy(
-                        cudaDeviceGrid[i], 
-                        grid[i], 
-                        sizeof(Vector3d) * (GRID_RES), 
-                        cudaMemcpyHostToDevice
-                );
-	}
-
-	cout << "initializing mpm with " << params.NUM_PARTICLES/3 << " particles" << endl;
-
-	params.particles = &cudaDeviceParticles[0];
+        params.NUM_PARTICLES = NUM_PARTICLES;
+	params.particles = (cudaMPM::Particle*) cudaDeviceParticles;
 	params.grid = cudaDeviceGrid;
 
         cudaMemcpyToSymbol(
@@ -353,4 +367,5 @@ void cudaMPM::setup(void)
                 &params,
                 sizeof(GlobalConstants)
         );
+        */
 }

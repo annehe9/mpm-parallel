@@ -23,7 +23,6 @@ using namespace Eigen;
 #include "cudaMPM.h"
 
 // Granularity
-const static int MAX_PARTICLES = 25000;
 const static int BLOCK_PARTICLES = 1000;		// number of particles added in a block
 int NUM_PARTICLES = 0;					// keeps track of current number of particles
 const static int GRID_RES = 80;				// grid dim of one side
@@ -55,7 +54,7 @@ static int step = 0;	// current simulation step
 const static int FPS = 500; // fps of output video
 const static int INV_FPS = (1.0 / DT) / FPS;
 
-cudaMPM* solver;
+cudaMPM *solver;
 
 void InitMPM(void)
 {
@@ -69,8 +68,10 @@ double get_ms(struct timespec t) {
 
 void Update(void)
 {
-	solver->Update();
+	//solver->Update();
 	step++;
+        if (step % 100 == 0) 
+                cout << "Step: " << step << endl;
 	glutPostRedisplay();
 }
 
@@ -94,8 +95,13 @@ void Render(void)
 
 	glColor4f(0.2f, 0.6f, 1.0f, 1);
 	glBegin(GL_POINTS);
-	for (auto& p : solver->particles)
-		glVertex2f(p.x(0) * WINDOW_WIDTH, p.x(1) * WINDOW_HEIGHT);
+
+        /*
+        for (int i = 0; i < solver->NUM_PARTICLES; i++) {
+                cudaMPM::Particle p = solver->particles[i];
+        	glVertex2f(p.x(0) * WINDOW_WIDTH, p.x(1) * WINDOW_HEIGHT);
+        }
+        */
 	glEnd();
 
 	glutSwapBuffers();
@@ -109,7 +115,6 @@ void Render(void)
 		frame++;
 		free(buffer);
 	}
-
 }
 
 void Keyboard(unsigned char c, __attribute__((unused)) int x, __attribute__((unused)) int y)
