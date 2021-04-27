@@ -205,7 +205,7 @@ void UpdateGridVelocity(void) {
         // is better than dynamic scheduling.
         // Consider that only some of the iterations actually have work.
         // Most others are just a check.
-        //#pragma omp parallel for collapse(2) private(i, j) //schedule(dynamic)
+        #pragma omp parallel for collapse(2) private(i, j) schedule(dynamic)
         for (i = 0; i < GRID_RES; i++) {
                 for (j = 0; j < GRID_RES; j++) {
                         Vector3d &g = grid[i][j];
@@ -285,7 +285,7 @@ void G2P_iteration(Particle p) {
 void G2P(void)
 {
         size_t i;
-        #pragma omp parallel for schedule(dynamic) private(i)
+        #pragma omp parallel for schedule(static) private(i)
 	for (i = 0; i < particles.size(); i++) {//(Particle &p : particles) {
                 G2P_iteration(particles[i]);
 	}
@@ -305,12 +305,14 @@ void Update(void)
         clock_gettime(CLOCK_REALTIME, &t3);
 	G2P();
         clock_gettime(CLOCK_REALTIME, &t4);
+        /*
         printf("Total: %.3f\nP2G: %.3f\tUpdate: %.3f\tG2P: %.3f\n",
                 get_ms(t4) - get_ms(t1),                
                 get_ms(t2) - get_ms(t1),                
                 get_ms(t3) - get_ms(t2),                
                 get_ms(t4) - get_ms(t3) 
         );
+        */
         totalTime += get_ms(t4) - get_ms(t1);
         avgP2G += get_ms(t2) - get_ms(t1);
         avgGrid += get_ms(t3) - get_ms(t2);
@@ -368,6 +370,9 @@ void Keyboard(unsigned char c, __attribute__((unused)) int x, __attribute__((unu
 
 int main(int argc, char** argv)
 {
+        printf("Original cores: %d\tOriginal max threads: %d\n", 
+                NCORES, MAX_NTHREADS
+        );
         // OpenMP
         if (argc < 2) {
                 printf("Input # of cores.");
@@ -378,7 +383,7 @@ int main(int argc, char** argv)
         omp_set_num_threads(NCORES);
         // Eigen
         Eigen::initParallel();
-        //Eigen::setNbThreads(n);
+        Eigen::setNbThreads(NCORES);
 
 	//glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
 	//glutInit(&argc, argv);
