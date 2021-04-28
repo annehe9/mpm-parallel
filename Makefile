@@ -24,25 +24,28 @@ LD = g++
 OBJDIR = obj
 SRCDIR = src
 
-CFLAGS = -std=c++11 -pedantic -Wno-deprecated -Wall -Wextra -O3 -DNDEBUG
+CFLAGS = -std=c++11 -pedantic -Wno-deprecated -Wall -Wextra -O3 -DNDEBUG # -std=gnu++11 
 CFLAGS += $(INCLUDE_PATH) -I./include -I./$(SRCDIR)
-OMP = -fopenmp
 LFLAGS = -std=c++11 -O3 -Wall -Wno-deprecated -Werror -pedantic $(LIBRARY_PATH) -DNDEBUG
 LIBS = $(OPENGL_LIBS)
 NVCCFLAGS = -O3 --gpu-architecture compute_61 -ccbin /usr/bin/gcc
 
-OBJS = $(OBJDIR)/main.o $(OBJDIR)/cudaMPM.o $(OBJDIR)/helper.o
+OBJS = $(OBJDIR)/main.o $(OBJDIR)/cudaMPM.o $(OBJDIR)/helper.o $(OBJDIR)/mapping.o
 
 default: $(TARGET)
 
 all: clean $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(LD) $(OMP) $(LFLAGS) $(OBJS) $(LIBS) -o $(TARGET)
+	$(LD) $(LFLAGS) $(OBJS) $(LIBS) -o $(TARGET)
 
 $(OBJDIR)/main.o: $(SRCDIR)/main.cpp
 	mkdir -p $(OBJDIR)
-	$(CC) $(OMP) $(CFLAGS) -c $(SRCDIR)/main.cpp -o $(OBJDIR)/main.o
+	$(CC) $(CFLAGS) -c $(SRCDIR)/main.cpp -o $(OBJDIR)/main.o
+
+$(OBJDIR)/mapping.o: $(SRCDIR)/mapping.cpp
+	mkdir -p $(OBJDIR)
+	$(CC) $(CFLAGS) -c $(SRCDIR)/mapping.cpp -o $(OBJDIR)/mapping.o
 
 $(OBJDIR)/helper.o: $(SRCDIR)/helper.cu
 	mkdir -p $(OBJDIR)

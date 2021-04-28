@@ -22,31 +22,9 @@ using namespace Eigen;
 
 #include "cudaMPM.h"
 
-// Granularity
-const static int BLOCK_PARTICLES = 1000;		// number of particles added in a block
-int NUM_PARTICLES = 0;					// keeps track of current number of particles
-const static int GRID_RES = 80;				// grid dim of one side
-const static int NUM_CELLS = GRID_RES * GRID_RES;	// number of cells in the grid
-const static double DT = 0.00001;			// integration timestep
-const static double DX = 1.0 / GRID_RES;
-const static double INV_DX = 1.0 / DX;
-
-// Simulation params
-const static double MASS = 1.0;					// mass of one particle
-const static double VOL = 1.0;					// volume of one particle
-const static double HARD = 10.0;					// snow hardening factor
-const static double E = 10000;				// Young's Modulus, resistance to fracture
-const static double NU = 0.2;					// Poisson ratio
-
-// Initial Lame params
-const static double MU_0 = E / (2 * (1 + NU));
-const static double LAMBDA_0 = (E * NU) / ((1 + NU) * (1 - 2 * NU));
-
 // Render params
 const static int WINDOW_WIDTH = 800;
 const static int WINDOW_HEIGHT = 600;
-//const static double VIEW_WIDTH = 1.5 * 800;
-//const static double VIEW_HEIGHT = 1.5 * 600;
 
 // Image output params
 static int frame = 0;	// current image
