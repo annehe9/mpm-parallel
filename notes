@@ -24,3 +24,12 @@ const static int WINDOW_HEIGHT = 600;
 //const static double VIEW_WIDTH = 1.5 * 800;
 //const static double VIEW_HEIGHT = 1.5 * 600;
 
+                        /*
+                        // use same particle data on GPU as from before
+                        // zero-out GPU grid
+                        cudaMemset(
+                                cudaDeviceBlock, 
+                                0, 
+                                sizeof(Vector3d) * BLOCKSIZE
+                        );
+                        */

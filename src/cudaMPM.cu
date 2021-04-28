@@ -247,10 +247,16 @@ void cudaMPM::Update(void)
 	dim3 blockDimG(BLOCKSIDE, BLOCKSIDE);
         dim3 gridDimG(1, 1);
 
-        int grid_block_side = (GRID_RES + BLOCKSIDE - 1) / BLOCKSIDE;
+        int grid_block_side = (OFFSIZE + BLOCKSIDE - 1) / BLOCKSIDE;
 
-        int index, i, j;
+        int index, i, j, m, n;
+
+        // starting point of block (wrap around for neighbors)
+        int grid_block_x = 0;
+        int grid_block_y = 0;
         int nsize = 0;
+
+        memset(grid, 0, NUM_CELLS);
 
         // process grids and particles in blocks
         for (i = 0; i < grid_block_side; i++) {
@@ -268,12 +274,20 @@ void cudaMPM::Update(void)
                                 cudaMemcpyHostToDevice
                         );
 
-                        // use same particle data on GPU as from before
-                        // zero-out GPU grid
-                        cudaMemset(
+                        // copy grid block to grid_block >> TODO
+                        for (m = 0; m < BLOCKSIDE; m++) {
+                                for (n = 0; n < BLOCKSIDE; n++) {
+                                        grid_block[m][n] =
+                                                grid[m + grid_block_x][n + grid_block_y];
+                                }
+                        }
+
+                        // copy grid data to GPU to get neighbors
+                        cudaMemcpy(
                                 cudaDeviceBlock, 
-                                0, 
-                                sizeof(Vector3d) * BLOCKSIZE
+                                (void **)grid_block,
+                                sizeof(Vector3d) * BLOCKSIZE, 
+                                cudaMemcpyHostToDevice
                         );
 
                         P2G<<<gridDim, blockDim>>>();
@@ -291,11 +305,23 @@ void cudaMPM::Update(void)
 
                         // copy grid data back to CPU
                         cudaMemcpy(
-                                (void **)(grid + index), // from index 
+                                (void **)grid_block,
                                 cudaDeviceBlock, 
                                 sizeof(Vector3d) * BLOCKSIZE, 
                                 cudaMemcpyDeviceToHost
                         );
+
+                        // copy grid_block to grid block
+                        for (m = 0; m < BLOCKSIDE; m++) {
+                                for (n = 0; n < BLOCKSIDE; n++) {
+                                        grid[m + grid_block_x][n + grid_block_y]
+                                                = grid_block[m][n];
+                                }
+                        }
+
+                        // starting point of block (wrap around for neighbors)
+                        grid_block_x += OFFSIDE;
+                        grid_block_y += OFFSIDE;
                 }
 
                 // swap particle buffers by changing pointers
@@ -314,7 +340,8 @@ cudaMPM::cudaMPM() {
 	NUM_PARTICLES = 0;
 
         particles = (Particle *) malloc(sizeof(Particle) * MAX_PARTICLES);
-        grid = (Vector3d *) malloc(sizeof(Vector3d *) * GRID_RES * GRID_RES);
+        grid = (Vector3d *) malloc(sizeof(Vector3d *) * NUM_CELLS);
+        grid_block = (Vector3d *) malloc(sizeof(Vector3d *) * BLOCKSIZE);
 }
 
 // CPU, prep GPU
@@ -337,9 +364,10 @@ void cudaMPM::setup(void)
                 sizeof(Particle) * NUM_PARTICLES
         );
 
+        // outer ring is for neighborhood 
 	cudaMalloc(
                 (void**)cudaDeviceBlock, 
-                sizeof(Vector3d) * BLOCKSIZE 
+                sizeof(Vector3d) * BLOCKSIZE
         );
 
         // copy initial set of particles, CPU->GPU 
@@ -350,8 +378,9 @@ void cudaMPM::setup(void)
                 cudaMemcpyHostToDevice
         );
 
+        // begin data structure
         map_setup();
-        map_particles(particles, NUM_PARTICLES); // begin data structure
+        map_particles(particles, NUM_PARTICLES);
 
         // get global cuda params
         params.NUM_PARTICLES = NUM_PARTICLES;

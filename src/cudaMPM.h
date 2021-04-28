@@ -12,7 +12,9 @@ public:
         Particle *particle_next;
         Particle *particle_set;
         int *pSize;
+
 	Vector3d *grid;
+        Vector3d *grid_block;
 
 	Particle *cudaDeviceParticles;
 	Vector3d *cudaDeviceBlock;

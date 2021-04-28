@@ -5,6 +5,9 @@ using namespace Eigen;
 
 #define BLOCKSIDE 32
 #define BLOCKSIZE ((BLOCKSIDE) * (BLOCKSIDE))
+// size of each block
+#define OFFSIDE (BLOCKSIDE - 2)
+#define OFFSIZE ((OFFSIDE) * (OFFSIDE))
 
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
 //#include "stb_image_write.h"

@@ -11,8 +11,9 @@ int grid_block_side;
 // grid is arranged in blocks going left-to-right, up-to-down
 int hash_particle(Particle p) {
         Vector2i base_coord = (p.x * INV_DX - Vector2d(0.5, 0.5)).cast<int>();
-        int gx = base_coord.x();
-        int gy = base_coord.y();
+        // middle of 3x3 neighborhood, where base_coord is upper-left
+        int gx = base_coord.x() + 1;
+        int gy = base_coord.y() + 1;
         int bx = gx / grid_block_side;
         int by = gy / grid_block_side;
         return bx * grid_block_side + by;
