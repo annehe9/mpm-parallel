@@ -20,7 +20,6 @@ using namespace std;
 #include "cudaMPM.h"
 //#include "helper.h"
 
-#define EPSILON 0.00000001
 
 struct SVDResults {
         Matrix2d V;
@@ -40,12 +39,10 @@ __device__ void SolveJacobiSVD(Matrix2d M, SVDResults *R) {
        R->singularValues = Matrix2d::Zero();
 
        // handle special identity matrix case
-       /*
-       if (abs(M(0, 0) - 1) < EPSILON 
-           && abs(M(0, 1) - 0) < EPSILON
-           && abs(M(1, 0) - 0) < EPSILON
-           && abs(M(1, 1) - 1) < EPSILON) {
-       */
+       if (M(0, 0) == 1
+           && M(0, 1) == 0
+           && M(1, 0) == 0
+           && M(1, 1) == 1) {
                R->V = Matrix2d::Identity();
                R->U = Matrix2d::Identity();
                R->singularValues = Matrix2d::Identity();
