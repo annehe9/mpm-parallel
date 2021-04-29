@@ -102,6 +102,14 @@ void SolveJacobiSVD(Matrix2d M, SVDResults* R) {
     R->U = Matrix2d::Zero();
     R->singularValues = Matrix2d::Zero();
 
+    // handle special identity matrix case
+    if (M(0, 0) == 1 && M(0, 1) == 0 && M(1, 0) == 0 && M(1, 1) == 1) {
+       R->V = Matrix2d::Identity();
+       R->U = Matrix2d::Identity();
+       R->singularValues = Matrix2d::Identity();
+       return;
+    }
+
     double y1 = (M(1, 0) + M(0, 1));
     double x1 = (M(0, 0) - M(1, 1));
     double y2 = (M(1, 0) - M(0, 1));
