@@ -125,7 +125,10 @@ int main(int argc, char** argv)
         /*
 	solver = new cudaMPM();
 	solver->setup();
-	solver->Update();
+	solver->Update(true);
+	solver->Update(true);
+	solver->Update(true);
+	solver->Update(true);
         */
 
 	return 0;

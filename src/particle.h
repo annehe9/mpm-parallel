@@ -23,7 +23,7 @@ using namespace Eigen;
 // https://lucasschuermann.com/writing/implementing-sph-in-2d for visualization
 
 // Granularity
-#define BLOCK_PARTICLES 10		// number of particles added in a block
+#define BLOCK_PARTICLES 1000		// number of particles added in a block
 #define GRID_RES 80
 #define TRUE_GRID_RES ((GRID_RES) - 2)
 #define NUM_CELLS ((GRID_RES) * (GRID_RES))	// number of cells in the grid

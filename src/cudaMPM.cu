@@ -40,12 +40,17 @@ __device__ void SolveJacobiSVD(Matrix2d M, SVDResults *R) {
        R->singularValues = Matrix2d::Zero();
 
        // handle special identity matrix case
-       if (M(0, 0) == 1 && M(0, 1) == 0 && M(1, 0) == 0 && M(1, 1) == 1) {
+       /*
+       if (abs(M(0, 0) - 1) < EPSILON 
+           && abs(M(0, 1) - 0) < EPSILON
+           && abs(M(1, 0) - 0) < EPSILON
+           && abs(M(1, 1) - 1) < EPSILON) {
+       */
                R->V = Matrix2d::Identity();
                R->U = Matrix2d::Identity();
                R->singularValues = Matrix2d::Identity();
                return;
-       }
+       //}
 
        double y1 = (M(1, 0) + M(0, 1));
        double x1 = (M(0, 0) - M(1, 1));
@@ -183,6 +188,11 @@ __global__ void P2G(void)
                         // Translational momentum
                         Vector3d mass_x_velocity(p.v.x() * MASS, p.v.y() * MASS, MASS);
                         Vector2d tmp = affine * dpos;
+                        if (x * GRID_RES + y < 0 || x * GRID_RES + y >= NUM_CELLS)
+                                printf("P2G grid access %d (%d, %d), (%f, %f)\n", x * GRID_RES + y, x, y,
+                                        cuConstParams.particles[index].x(0),
+                                        cuConstParams.particles[index].x(1)
+                                );
                         cuConstParams.grid[x * GRID_RES + y] += (
                                 w[i].x() * w[j].y() * (mass_x_velocity + Vector3d(tmp.x(), tmp.y(), 0))
                         );
@@ -197,6 +207,8 @@ __global__ void UpdateGridVelocity(void) {
         if (i >= GRID_RES || j >= GRID_RES) return;
 
         int index = i * GRID_RES + j;
+        if (index < 0 || index >= NUM_CELLS)
+                printf("UpdateGridVelocity grid access %d\n", index);
         //Vector3d& g = cuConstParams.grid[index];
         // block to grid
         if (cuConstParams.grid[index][2] > 0) {
@@ -220,6 +232,11 @@ __global__ void UpdateGridVelocity(void) {
                         cuConstParams.grid[index][1] = 0.0;
                 }
         }
+        /*
+        printf("UpdateGridVelocity: (%d, %d) => (%f, %f, %f)\n",
+                i, j, cuConstParams.grid[i * GRID_RES + j][0], cuConstParams.grid[i * GRID_RES + j][1], cuConstParams.grid[i * GRID_RES + j][2]
+        );
+        */
 }
 
 // GPU function, changes particle, not grid
@@ -261,6 +278,11 @@ __global__ void G2P(void)
                         int x = base_coord.x() + i;
                         int y = base_coord.y() + j; 
                         Vector2d dpos = (Vector2d(i, j) - fx);
+                        if (x * GRID_RES + y < 0 || x * GRID_RES + y >= NUM_CELLS)
+                                printf("G2P grid access %d (%d, %d) (%f, %f)\n", x * GRID_RES + y, x, y,
+                                        cuConstParams.particles[index].x(0),
+                                        cuConstParams.particles[index].x(1)
+                                );
                         Vector3d curr = cuConstParams.grid[x * GRID_RES + y];
                         Vector2d grid_v(curr.x(), curr.y());
                         double weight = w[i].x() * w[j].y();
@@ -277,11 +299,14 @@ __global__ void G2P(void)
         Vector2d temp = cuConstParams.particles[index].x;
         cuConstParams.particles[index].x += DT * cuConstParams.particles[index].v;
 
-        if (index == 29) printf("update pos (%f, %f) <= (%f, %f) + %f * (%f, %f)", 
-                cuConstParams.particles[index].x(0), cuConstParams.particles[index].x(1), 
-                temp(0), temp(1), DT,
-                cuConstParams.particles[index].v(0), cuConstParams.particles[index].v(1)
+        /*
+        printf("G2P 1 (%d) => F:(%f, %f, %f, %f) C: (%f, %f, %f, %f) Jp:%f\n", 
+               index,
+               cuConstParams.particles[index].F(0, 0), cuConstParams.particles[index].F(0, 1), cuConstParams.particles[index].F(1, 0), cuConstParams.particles[index].F(1, 1),
+               cuConstParams.particles[index].C(0, 0), cuConstParams.particles[index].C(0, 1), cuConstParams.particles[index].C(1, 0), cuConstParams.particles[index].C(1, 1),
+               cuConstParams.particles[index].Jp
         );
+        */
 
         // MLS-MPM F-update eqn 17
         Matrix2d F = (Matrix2d::Identity() + DT * cuConstParams.particles[index].C) * cuConstParams.particles[index].F;
@@ -293,16 +318,43 @@ __global__ void G2P(void)
         // Snow Plasticity
         Matrix2d sig = R->singularValues;
 
+        /*
+        printf("G2P 2 (%d) => F: (%f, %f, %f, %f)\n => S: (%f, %f, %f, %f)\nV: (%f, %f, %f, %f)\nU: (%f, %f, %f, %f)\n",
+                index,
+                F(0, 0), F(0, 1), F(1, 0), F(1, 1),                
+                R->singularValues(0, 0), R->singularValues(0, 1), R->singularValues(1, 0), R->singularValues(1, 1),
+                R->V(0, 0), R->V(0, 1), R->V(1, 0), R->V(1, 1),
+                R->U(0, 0), R->U(0, 1), R->U(1, 0), R->U(1, 1) 
+        );
+        */
+
         sig(0, 0) = min(max(sig(0, 0), 1.0 - 2.5e-2), 1.0 + 7.5e-3);
         sig(1, 1) = min(max(sig(1, 1), 1.0 - 2.5e-2), 1.0 + 7.5e-3);
 
         double oldJ = determinant(F);
         F = svd_u * sig * svd_v.transpose();
 
+        /*
+        printf("G2P 3 (%d) => xF:(%f, %f, %f, %f) oldJp:%f\n", 
+                F(0, 0), F(0, 1), F(1, 0), F(1, 1), oldJ
+        );
+        */
+
         double Jp_new = min(max(cuConstParams.particles[index].Jp * oldJ / determinant(F), 0.6), 20.0);
 
         cuConstParams.particles[index].Jp = Jp_new;
         cuConstParams.particles[index].F = F;
+
+        /*
+        printf("G2P (%d) => x:(%f, %f) v:(%f, %f) F:(%f, %f, %f, %f) C: (%f, %f, %f, %f) Jp:%f\n", 
+               index,
+               cuConstParams.particles[index].x(0), cuConstParams.particles[index].x(1),
+               cuConstParams.particles[index].v(0), cuConstParams.particles[index].v(1),
+               cuConstParams.particles[index].F(0, 0), cuConstParams.particles[index].F(0, 1), cuConstParams.particles[index].F(1, 0), cuConstParams.particles[index].F(1, 1),
+               cuConstParams.particles[index].C(0, 0), cuConstParams.particles[index].C(0, 1), cuConstParams.particles[index].C(1, 0), cuConstParams.particles[index].C(1, 1),
+               cuConstParams.particles[index].Jp
+        );
+        */
 }
 
 // CPU
@@ -323,6 +375,7 @@ void cudaMPM::Update(bool debug)
                 cudaMemcpyHostToDevice
         );
 
+        /*
         if (debug) {
                 for (int a = 0; a < NUM_PARTICLES; a++) {
                         printf("particles: (%f, %f), (%f, %f)\n", 
@@ -331,6 +384,7 @@ void cudaMPM::Update(bool debug)
                         );
                 }
         }
+        */
 
         // parallelization over particles
         dim3 blockDim(BLOCKSIZE, 1);
@@ -339,6 +393,22 @@ void cudaMPM::Update(bool debug)
         );
         P2G<<<gridDim, blockDim>>>();
         cudaDeviceSynchronize();
+
+        /*
+        cudaMemcpy(
+                (void*)grid,
+                (void*)cudaDeviceGrid,
+                sizeof(Vector3d) * NUM_CELLS, 
+                cudaMemcpyDeviceToHost
+        );
+        for (int i = 0; i < GRID_RES; i++) {
+                for (int j = 0; j < GRID_RES; j++) {
+                        printf("P2G: (%d, %d) => (%f, %f, %f)\n",
+                                i, j, grid[i * GRID_RES + j][0], grid[i * GRID_RES + j][1], grid[i * GRID_RES + j][2]
+                        );
+                }
+        }
+        */
 
         // parallelization over grid
         blockDim.x = BLOCKSIDE;
@@ -357,13 +427,15 @@ void cudaMPM::Update(bool debug)
         cudaDeviceSynchronize();
 
         // copy particle data back to CPU
-        cudaMemcpy(
+        cudaError_t err = cudaMemcpy(
                 (void*)particles,
                 (void*)cudaDeviceParticles,
                 sizeof(Particle) * NUM_PARTICLES, 
                 cudaMemcpyDeviceToHost
         );
+        printf("GPU->CPU COPY ERROR: %d\n", err);
 
+        /*
         if (debug) {
                 for (int a = 0; a < NUM_PARTICLES; a++) {
                         printf(">particles: (%f, %f), (%f, %f)\n", 
@@ -372,6 +444,7 @@ void cudaMPM::Update(bool debug)
                         );
                 }
         }
+        */
 
         /*
         // copy grid data back to GPU to see
@@ -410,6 +483,13 @@ void cudaMPM::setup(void)
 	addParticles(0.55, 0.45);
 	addParticles(0.45, 0.65);
 	addParticles(0.55, 0.85);
+
+        /*
+        int NUM_PARTICLES = 3;
+        particles[0] = Particle(0.483769, 0.854159);
+        particles[1] = Particle(0.525823, 0.912437);
+        particles[2] = Particle(0.480095, 0.843232);
+        */
 
 	cout << "initializing mpm with " << NUM_PARTICLES << " particles" << endl;
 
