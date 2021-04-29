@@ -1,3 +1,5 @@
+what if no processing on all steps? good answer? is copying right
+
 // Granularity
 const static int BLOCK_PARTICLES = 1000;		// number of particles added in a block
 int NUM_PARTICLES = 0;					// keeps track of current number of particles

@@ -9,18 +9,13 @@ public:
         int NUM_PARTICLES;
 
 	Particle *particles;
-        Particle *particle_next;
-        Particle *particle_set;
-        int *pSize;
-
 	Vector3d *grid;
-        Vector3d *grid_block;
 
 	Particle *cudaDeviceParticles;
-	Vector3d *cudaDeviceBlock;
+	Vector3d *cudaDeviceGrid;
 
 	cudaMPM();
 	void setup();
 	void addParticles(double xcenter, double ycenter);
-	void Update(void);
+	void Update(bool debug);
 };

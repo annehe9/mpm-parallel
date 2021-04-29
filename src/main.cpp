@@ -46,10 +46,13 @@ double get_ms(struct timespec t) {
 
 void Update(void)
 {
-	//solver->Update();
-	step++;
-        if (step % 100 == 0) 
+        bool debug = false;
+        if (step % 200 == 0) {
+                debug = true;
                 cout << "Step: " << step << endl;
+        }
+	solver->Update(debug);
+	step++;
 	glutPostRedisplay();
 }
 
@@ -74,12 +77,10 @@ void Render(void)
 	glColor4f(0.2f, 0.6f, 1.0f, 1);
 	glBegin(GL_POINTS);
 
-        /*
         for (int i = 0; i < solver->NUM_PARTICLES; i++) {
-                cudaMPM::Particle p = solver->particles[i];
+                Particle p = solver->particles[i];
         	glVertex2f(p.x(0) * WINDOW_WIDTH, p.x(1) * WINDOW_HEIGHT);
         }
-        */
 	glEnd();
 
 	glutSwapBuffers();
@@ -120,5 +121,12 @@ int main(int argc, char** argv)
 	InitMPM();
 
 	glutMainLoop();
+
+        /*
+	solver = new cudaMPM();
+	solver->setup();
+	solver->Update();
+        */
+
 	return 0;
 }

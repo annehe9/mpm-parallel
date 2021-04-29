@@ -1,12 +1,14 @@
 #include "eigen3/Eigen/Dense"
 using namespace Eigen;
 
+#define DEBUG 0
+
 #define MAX_PARTICLES 100000
 
-#define BLOCKSIDE 32
+#define BLOCKSIDE 16
 #define BLOCKSIZE ((BLOCKSIDE) * (BLOCKSIDE))
 // size of each block
-#define OFFSIDE (BLOCKSIDE - 2)
+#define OFFSIDE ((BLOCKSIDE) - 2)
 #define OFFSIZE ((OFFSIDE) * (OFFSIDE))
 
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -21,12 +23,16 @@ using namespace Eigen;
 // https://lucasschuermann.com/writing/implementing-sph-in-2d for visualization
 
 // Granularity
-#define BLOCK_PARTICLES 1000		// number of particles added in a block
+#define BLOCK_PARTICLES 10		// number of particles added in a block
 #define GRID_RES 80
-#define NUM_CELLS GRID_RES * GRID_RES	// number of cells in the grid
+#define TRUE_GRID_RES ((GRID_RES) - 2)
+#define NUM_CELLS ((GRID_RES) * (GRID_RES))	// number of cells in the grid
+#define NUM_TRUE_CELLS ((TRUE_GRID_RES) * (TRUE_GRID_RES))
 #define DT 0.00001			// integration timestep
-#define DX 1.0 / GRID_RES
-#define INV_DX 1.0 / DX
+#define DX (1.0 / (GRID_RES))
+#define INV_DX (1.0 / (DX))
+
+#define GRID_BLOCK_SIDE (((TRUE_GRID_RES) + (OFFSIDE) - 1) / (OFFSIDE))
 
 // Simulation params
 #define MASS 1.0					// mass of one particle
@@ -42,8 +48,9 @@ using namespace Eigen;
 // Particle representation
 struct Particle
 {
-        Particle(double _x, double _y) : x(_x, _y), v(0.0, 0.0), F(Matrix2d::Identity()), C(Matrix2d::Zero()), Jp(1.0) {}
-        Vector2d x, v; //position and velocity
+        Particle(double _x, double _y) : F(Matrix2d::Identity()), C(Matrix2d::Zero()), x(_x, _y), v(0.0, 0.0), Jp(1.0) {}
         Matrix2d F, C; //deformation gradient, APIC momentum
+        Vector2d x, v; //position and velocity
         double Jp; //determinant of deformation gradient, which is volume
+        double _padding; // extra for padding to resolve sizeof issues (so it appears as 112)
 };

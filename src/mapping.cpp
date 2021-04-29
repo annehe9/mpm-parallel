@@ -1,4 +1,8 @@
 // Keep mapping in separate file to prevent compilation issues.
+#include <stdio.h>
+#include <iostream>
+using namespace std;
+
 #include <unordered_map>
 #include <set>
 
@@ -6,7 +10,6 @@
 
 
 std::unordered_map<int, std::set<int>> block_particles;
-int grid_block_side;
 
 // grid is arranged in blocks going left-to-right, up-to-down
 int hash_particle(Particle p) {
@@ -14,23 +17,21 @@ int hash_particle(Particle p) {
         // middle of 3x3 neighborhood, where base_coord is upper-left
         int gx = base_coord.x() + 1;
         int gy = base_coord.y() + 1;
-        int bx = gx / grid_block_side;
-        int by = gy / grid_block_side;
-        return bx * grid_block_side + by;
-}
-
-void map_setup() {
-        grid_block_side = (GRID_RES + BLOCKSIDE - 1) / BLOCKSIDE;
+        int bx = gx / OFFSIDE;// GRID_BLOCK_SIDE;
+        int by = gy / OFFSIDE;//GRID_BLOCK_SIDE;
+        if (DEBUG) printf("(%f, %f) => (%d, %d) => (%d, %d)\n", p.x(0), p.x(1), gx, gy, bx, by);
+        return bx * GRID_BLOCK_SIDE + by;
 }
 
 void map_particles(Particle *particles, int num_particles) {
         // reset sets
-        for (int i = 0; grid_block_side * grid_block_side; i++) {
+        for (int i = 0; i < GRID_BLOCK_SIDE * GRID_BLOCK_SIDE; i++) {
                 block_particles[i].clear();
         }
         int hash_block;
         for (int i = 0; i < num_particles; i++) {
                 hash_block = hash_particle(particles[i]);
+                if (DEBUG) cout << "map: " << i << ", " << hash_block << endl;
                 block_particles[hash_block].insert(i);     
         }        
 }
