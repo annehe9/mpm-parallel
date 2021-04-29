@@ -274,7 +274,14 @@ __global__ void G2P(void)
         // Advection
         // UPDATE PARTICLE POSITION 
         //double tempy = p.x.y();
+        Vector2d temp = cuConstParams.particles[index].x;
         cuConstParams.particles[index].x += DT * cuConstParams.particles[index].v;
+
+        if (index == 29) printf("update pos (%f, %f) <= (%f, %f) + %f * (%f, %f)", 
+                cuConstParams.particles[index].x(0), cuConstParams.particles[index].x(1), 
+                temp(0), temp(1), DT,
+                cuConstParams.particles[index].v(0), cuConstParams.particles[index].v(1)
+        );
 
         // MLS-MPM F-update eqn 17
         Matrix2d F = (Matrix2d::Identity() + DT * cuConstParams.particles[index].C) * cuConstParams.particles[index].F;
