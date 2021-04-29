@@ -52,7 +52,7 @@ struct Cell
 
 // Granularity
 const static int MAX_PARTICLES = 25000;
-const static int BLOCK_PARTICLES = 1000;		// number of particles added in a block
+const static int BLOCK_PARTICLES = 10;		// number of particles added in a block
 int NUM_PARTICLES = 0;					// keeps track of current number of particles
 const static int GRID_RES = 80;				// grid dim of one side
 const static int NUM_CELLS = GRID_RES * GRID_RES;	// number of cells in the grid
@@ -199,6 +199,13 @@ void P2G(void)
 			}
 		}
 	}
+        for (int i = 0; i < GRID_RES; i++) {
+                for (int j = 0; j < GRID_RES; j++) {
+                        printf("P2G: (%d, %d) => (%f, %f, %f)\n",
+                                i, j, grid[i][j][0], grid[i][j][1], grid[i][j][2]
+                        );
+                }
+        }
 }
 
 void UpdateGridVelocity(void) {
@@ -230,6 +237,13 @@ void UpdateGridVelocity(void) {
 			}
 		}
 	}
+        for (int i = 0; i < GRID_RES; i++) {
+                for (int j = 0; j < GRID_RES; j++) {
+                        printf("UpdateGridVelocity: (%d, %d) => (%f, %f, %f)\n",
+                                i, j, grid[i][j][0], grid[i][j][1], grid[i][j][2]
+                        );
+                }
+        }
 }
 
 void G2P(void)
@@ -327,15 +341,49 @@ void G2P(void)
 		p.Jp = Jp_new;
 		p.F = F;
 	}
+
+        for (int a = 0; a < NUM_PARTICLES; a++) {
+                printf("G2P (%d) => ", a);
+                printf("x:(%f, %f) v:(%f, %f) ", 
+                       particles[a].x(0), particles[a].x(1),
+                       particles[a].v(0), particles[a].v(1)
+                );
+                printf("F:(%f, %f, %f, %f) C: (%f, %f, %f, %f) Jp:%f\n",
+                       particles[a].F(0, 0), particles[a].F(0, 1), 
+                       particles[a].F(1, 0), particles[a].F(1, 1),
+                       particles[a].C(0, 0), particles[a].C(0, 1), 
+                       particles[a].C(1, 0), particles[a].C(1, 1),
+                       particles[a].Jp
+                );
+        }
 }
 
 void Update(void)
 {
+        printf("\n\nStep: %d\n", step);
+        /*
+        for (int a = 0; a < NUM_PARTICLES; a++) {
+                printf("particles: (%f, %f), (%f, %f)\n", 
+                        particles[a].x(0), particles[a].x(1),
+                        particles[a].v(0), particles[a].v(1)
+                );
+        }
+        */
+
 	P2G();
 	UpdateGridVelocity();
 	G2P();
 	step++;
-	glutPostRedisplay();
+	// glutPostRedisplay();
+
+        /*
+        for (int a = 0; a < NUM_PARTICLES; a++) {
+                printf(">particles: (%f, %f), (%f, %f)\n", 
+                        particles[a].x(0), particles[a].x(1),
+                        particles[a].v(0), particles[a].v(1)
+                );
+        }
+        */
 }
 
 
@@ -398,6 +446,7 @@ void Keyboard(unsigned char c, __attribute__((unused)) int x, __attribute__((unu
 
 int main(int argc, char** argv)
 {
+        /*
 	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
 	glutInit(&argc, argv);
 	glutCreateWindow("MPM");
@@ -409,5 +458,11 @@ int main(int argc, char** argv)
 	InitMPM();
 
 	glutMainLoop();
+        */
+        InitMPM();
+        Update();
+        Update();
+        Update();
+
 	return 0;
 }

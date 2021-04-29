@@ -39,7 +39,7 @@ void SolveNull(Matrix2d M, NullResults *R) {
                 R->nullity = 1;
         }
         else if (a != 0 && b != 0 && c != 0 && d != 0) { // all 4 non-zero
-                if (b/a - d/c < EPSILON) {
+                if (abs(b/a - d/c) < EPSILON) {
                         R->kernel.col(0) << -b/a, 1;
                         R->kernel.col(0).normalize();
                         R->nullity = 1;
@@ -102,6 +102,14 @@ void SolveJacobiSVD(Matrix2d M, SVDResults *R) {
        R->V = Matrix2d::Zero();
        R->U = Matrix2d::Zero();
        R->singularValues = Matrix2d::Zero();
+
+       // handle special identity matrix case
+       if (M(0, 0) == 1 && M(0, 1) == 0 && M(1, 0) == 0 && M(1, 1) == 1) {
+               R->V = Matrix2d::Identity();
+               R->U = Matrix2d::Identity();
+               R->singularValues = Matrix2d::Identity();
+               return;
+       }
 
        double y1 = (M(1, 0) + M(0, 1));
        double x1 = (M(0, 0) - M(1, 1));
