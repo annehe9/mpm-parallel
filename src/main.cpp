@@ -136,15 +136,18 @@ void P2G(void)
 
 		// Current volume
 		double J = p.F.determinant();
-                assert(J == determinant(p.F)); // TODO
 
 		// Polar decomposition for fixed corotated model, https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf paragraph after Eqn. 45
+                /*
 		JacobiSVD<Matrix2d> svd(p.F, ComputeFullU | ComputeFullV);
 		Matrix2d r = svd.matrixU() * svd.matrixV().transpose();
 		//Matrix2d s = svd.matrixV() * svd.singularValues().asDiagonal() * svd.matrixV().transpose();
+                */
                 SVDResults *R = (SVDResults *) malloc(sizeof(SVDResults));
                 SolveJacobiSVD(p.F, R);
+                Matrix2d r = R->U * R->V.transpose();
 
+                /*
                 Matrix2d U = svd.matrixU();
                 if ((U(0, 0) == 1 && U(0, 1) == 0 && U(1, 0) && U(1, 1) == 1)) {
                         cout << "U" << endl;
@@ -166,7 +169,7 @@ void P2G(void)
                         cout << R->singularValues << endl;
                         cout << "\n" << endl;
                 }
-		//assert(r.isApprox(R->U * R->V.transpose())); // TODO
+                */
 
 		// [https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf Paragraph after Eqn. 176]
 		double Dinv = 4 * INV_DX * INV_DX;
@@ -300,16 +303,24 @@ void G2P(void)
 		// MLS-MPM F-update eqn 17
 		Matrix2d F = (Matrix2d::Identity() + DT * p.C) * p.F;
 
+                /*
 		JacobiSVD<Matrix2d> svd(F, ComputeFullU | ComputeFullV);
 		Matrix2d svd_u = svd.matrixU();
 		Matrix2d svd_v = svd.matrixV();
 		// Snow Plasticity
 		Vector2d sigvalues = svd.singularValues().array().min(1.0f + 7.5e-3).max(1.0 - 2.5e-2);
 		Matrix2d sig = sigvalues.asDiagonal();
+                */
 
                 SVDResults *R = (SVDResults *) malloc(sizeof(SVDResults));
 		SolveJacobiSVD(F, R);
+                Matrix2d svd_u = R->U;
+                Matrix2d svd_v = R->V;
+                Matrix2d sig = R->singularValues;
+                sig(0, 0) = max(min(sig(0, 0), 1.0f + 7.5e-3), 1.0 - 2.5e-2);
+                sig(1, 1) = max(min(sig(1, 1), 1.0f + 7.5e-3), 1.0 - 2.5e-2);
 
+                /*
                 Matrix2d U = svd.matrixU();
                 if ((U(0, 0) == 1 && U(0, 1) == 0 && U(1, 0) && U(1, 1) == 1)) {
                         cout << "U" << endl;
@@ -331,16 +342,12 @@ void G2P(void)
                         cout << R->singularValues << endl;
                         cout << "\n" << endl;
                 }
-		//assert(svd_u.isApprox(R->U)); // TODO
-		//assert(svd_v.isApprox(R->V)); // TODO
-                //assert(sig.isApprox(R->singularValues)); // TODO
+                */
 
 		double oldJ = F.determinant();
-                assert(oldJ == determinant(F)); // TODO
 		F = svd_u * sig * svd_v.transpose();
 
 		double Jp_new = min(max(p.Jp * oldJ / F.determinant(), 0.6), 20.0);
-                assert(Jp_new == min(max(p.Jp * oldJ / determinant(F), 0.6), 20.0)); // TODO
 
 		p.Jp = Jp_new;
 		p.F = F;
