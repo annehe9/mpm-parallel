@@ -55,6 +55,8 @@ static vector<Particle> particles;
 // Vector3: [velocity_x, velocity_y, mass]
 static Vector3d grid[GRID_RES][GRID_RES];
 //static Cell grid[GRID_RES][GRID_RES];
+static size_t grididxs[GRID_RES * GRID_RES];
+static size_t num_filled = 0;
 
 // Simulation params
 const static double MASS = 1.0;					// mass of one particle
@@ -177,6 +179,20 @@ void P2G(void)
 	}
 }
 
+void CollectGridIndices(void) {
+    size_t i, j;
+    num_filled = 0;
+    for (i = 0; i < GRID_RES; i++) {
+        for (j = 0; j < GRID_RES; j++) {
+            Vector3d& g = grid[i][j];
+            if (g[2] > 0) {
+                grididxs[num_filled] = (i * GRID_RES + j);
+		num_filled++;
+            }
+        }
+    }
+}
+
 void UpdateGridVelocity_iteration(Vector3d g, int i, int j) {
         // Normalize by mass
         g /= g[2];
@@ -200,20 +216,17 @@ void UpdateGridVelocity_iteration(Vector3d g, int i, int j) {
 }
 
 void UpdateGridVelocity(void) {
-        int i, j;
+        size_t i;
         // TODO: Does not appear omp is useful here, but if must use, static
         // is better than dynamic scheduling.
         // Consider that only some of the iterations actually have work.
         // Most others are just a check.
-        #pragma omp parallel for collapse(2) private(i, j) schedule(dynamic)
-        for (i = 0; i < GRID_RES; i++) {
-                for (j = 0; j < GRID_RES; j++) {
-                        Vector3d &g = grid[i][j];
-                        if (g[2] > 0) {
-                                UpdateGridVelocity_iteration(g, i, j);
-                        }
-		}
-	}
+        #pragma omp parallel for schedule(static) private(i)
+        for (i = 0; i < num_filled; i++) {
+            size_t idx = grididxs[i];
+            Vector3d& g = grid[idx / GRID_RES][idx % GRID_RES];
+            UpdateGridVelocity_iteration(g, idx/GRID_RES, idx % GRID_RES);
+        }
 }
 
 void G2P_iteration(Particle p) {
@@ -301,6 +314,7 @@ void Update(void)
         clock_gettime(CLOCK_REALTIME, &t1);
 	P2G();
         clock_gettime(CLOCK_REALTIME, &t2);
+	CollectGridIndices();
 	UpdateGridVelocity();
         clock_gettime(CLOCK_REALTIME, &t3);
 	G2P();
