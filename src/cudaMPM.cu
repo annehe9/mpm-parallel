@@ -47,7 +47,7 @@ __device__ void SolveJacobiSVD(Matrix2d M, SVDResults *R) {
                R->U = Matrix2d::Identity();
                R->singularValues = Matrix2d::Identity();
                return;
-       //}
+       }
 
        double y1 = (M(1, 0) + M(0, 1));
        double x1 = (M(0, 0) - M(1, 1));
@@ -296,14 +296,12 @@ __global__ void G2P(void)
         Vector2d temp = cuConstParams.particles[index].x;
         cuConstParams.particles[index].x += DT * cuConstParams.particles[index].v;
 
-        /*
         printf("G2P 1 (%d) => F:(%f, %f, %f, %f) C: (%f, %f, %f, %f) Jp:%f\n", 
                index,
                cuConstParams.particles[index].F(0, 0), cuConstParams.particles[index].F(0, 1), cuConstParams.particles[index].F(1, 0), cuConstParams.particles[index].F(1, 1),
                cuConstParams.particles[index].C(0, 0), cuConstParams.particles[index].C(0, 1), cuConstParams.particles[index].C(1, 0), cuConstParams.particles[index].C(1, 1),
                cuConstParams.particles[index].Jp
         );
-        */
 
         // MLS-MPM F-update eqn 17
         Matrix2d F = (Matrix2d::Identity() + DT * cuConstParams.particles[index].C) * cuConstParams.particles[index].F;
@@ -315,7 +313,6 @@ __global__ void G2P(void)
         // Snow Plasticity
         Matrix2d sig = R->singularValues;
 
-        /*
         printf("G2P 2 (%d) => F: (%f, %f, %f, %f)\n => S: (%f, %f, %f, %f)\nV: (%f, %f, %f, %f)\nU: (%f, %f, %f, %f)\n",
                 index,
                 F(0, 0), F(0, 1), F(1, 0), F(1, 1),                
@@ -323,7 +320,6 @@ __global__ void G2P(void)
                 R->V(0, 0), R->V(0, 1), R->V(1, 0), R->V(1, 1),
                 R->U(0, 0), R->U(0, 1), R->U(1, 0), R->U(1, 1) 
         );
-        */
 
         sig(0, 0) = min(max(sig(0, 0), 1.0 - 2.5e-2), 1.0 + 7.5e-3);
         sig(1, 1) = min(max(sig(1, 1), 1.0 - 2.5e-2), 1.0 + 7.5e-3);
@@ -331,11 +327,9 @@ __global__ void G2P(void)
         double oldJ = determinant(F);
         F = svd_u * sig * svd_v.transpose();
 
-        /*
         printf("G2P 3 (%d) => xF:(%f, %f, %f, %f) oldJp:%f\n", 
                 F(0, 0), F(0, 1), F(1, 0), F(1, 1), oldJ
         );
-        */
 
         double Jp_new = min(max(cuConstParams.particles[index].Jp * oldJ / determinant(F), 0.6), 20.0);
 

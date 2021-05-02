@@ -110,6 +110,7 @@ void Keyboard(unsigned char c, __attribute__((unused)) int x, __attribute__((unu
 
 int main(int argc, char** argv)
 {
+        /*
 	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
 	glutInit(&argc, argv);
 	glutCreateWindow("MPM");
@@ -121,15 +122,14 @@ int main(int argc, char** argv)
 	InitMPM();
 
 	glutMainLoop();
+        */
 
-        /*
 	solver = new cudaMPM();
 	solver->setup();
 	solver->Update(true);
 	solver->Update(true);
 	solver->Update(true);
 	solver->Update(true);
-        */
 
 	return 0;
 }
