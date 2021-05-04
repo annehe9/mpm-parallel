@@ -23,12 +23,12 @@ using namespace Eigen;
 #define M_PI 3.14159265358979323846
 #endif
 
-#include <pthread.h>
-#include <omp.h>
+//#include <pthread.h>
+//#include <omp.h>
 //#include "helper.h"
 
-int NCORES = omp_get_num_procs();
-int MAX_NTHREADS = omp_get_max_threads();
+//int NCORES = omp_get_num_procs();
+//int MAX_NTHREADS = omp_get_max_threads();
 
 // References:
 // https://github.com/yuanming-hu/taichi_mpm/blob/master/mls-mpm88-explained.cpp
@@ -101,7 +101,7 @@ void InitMPM(void)
     addParticles(0.55, 0.85);
 }
 
-void P2G_iteration(Particle p) {
+void P2G_iteration(Particle& p) {
 
     Matrix2d PF_0, PF_1, PF, stress, affine;
     Vector3d mass_x_velocity;
@@ -174,7 +174,7 @@ void P2G(void)
     memset(grid, 0, sizeof(grid));
 
     size_t i;
-#pragma omp parallel for schedule(dynamic) private(i)
+    //#pragma omp parallel for schedule(dynamic) private(i)
     for (i = 0; i < particles.size(); i++) {//(Particle &p : particles) {
         P2G_iteration(particles[i]);
     }
@@ -194,7 +194,7 @@ void CollectGridIndices(void) {
     }
 }
 
-void UpdateGridVelocity_iteration(Vector3d g, int i, int j) {
+void UpdateGridVelocity_iteration(Vector3d& g, int i, int j) {
     // Normalize by mass
     g /= g[2];
     // Gravity
@@ -222,15 +222,16 @@ void UpdateGridVelocity(void) {
     // is better than dynamic scheduling.
     // Consider that only some of the iterations actually have work.
     // Most others are just a check.
-#pragma omp parallel for schedule(static) private(i)
+//#pragma omp parallel for schedule(static) private(i)
     for (i = 0; i < num_filled; i++) {
         size_t idx = grididxs[i];
         Vector3d& g = grid[idx / GRID_RES][idx % GRID_RES];
         UpdateGridVelocity_iteration(g, idx / GRID_RES, idx % GRID_RES);
+        //cout << "grid vel:" << g[1] << endl;
     }
 }
 
-void G2P_iteration(Particle p) {
+void G2P_iteration(Particle& p) {
     // element-wise floor
     Vector2i base_coord = (p.x * INV_DX - Vector2d(0.5, 0.5)).cast<int>();
     Vector2d fx = p.x * INV_DX - base_coord.cast<double>();
@@ -261,7 +262,9 @@ void G2P_iteration(Particle p) {
             Vector2d dpos = (Vector2d(i, j) - fx);
             Vector3d curr = grid[base_coord.x() + i][base_coord.y() + j];
             Vector2d grid_v(curr.x(), curr.y());
+            //cout << "grid vel:" << grid_v.y() << endl;
             double weight = w[i].x() * w[j].y();
+            //cout << "weight: " << weight << endl;
             // Velocity
             p.v += weight * grid_v;
             // APIC C, outer product of weighted velocity and dist, paper equation 10
@@ -272,8 +275,12 @@ void G2P_iteration(Particle p) {
     // Advection
     //double tempy = p.x.y();
     p.x += DT * p.v;
-    //cout << "change" << tempy - p.x.y() << endl;
-    //cout << "velocity " <<  p.v << endl;
+    /*
+    if (tempy - p.x.y() > 0) {
+        cout << "change" << tempy - p.x.y() << endl;
+    }
+    cout << "velocity " << p.v << endl;
+    */
 
     // MLS-MPM F-update eqn 17
     Matrix2d F = (Matrix2d::Identity() + DT * p.C) * p.F;
@@ -292,12 +299,13 @@ void G2P_iteration(Particle p) {
 
     p.Jp = Jp_new;
     p.F = F;
+
 }
 
 void G2P(void)
 {
     size_t i;
-#pragma omp parallel for schedule(static) private(i)
+    //#pragma omp parallel for schedule(static) private(i)
     for (i = 0; i < particles.size(); i++) {//(Particle &p : particles) {
         G2P_iteration(particles[i]);
     }
@@ -309,15 +317,15 @@ double get_ms(struct timespec t) {
 
 void Update(void)
 {
-    struct timespec t1, t2, t3, t4;
-    clock_gettime(CLOCK_REALTIME, &t1);
+    //struct timespec t1, t2, t3, t4;
+    //clock_gettime(CLOCK_REALTIME, &t1);
     P2G();
-    clock_gettime(CLOCK_REALTIME, &t2);
+    //clock_gettime(CLOCK_REALTIME, &t2);
     CollectGridIndices();
     UpdateGridVelocity();
-    clock_gettime(CLOCK_REALTIME, &t3);
+    //clock_gettime(CLOCK_REALTIME, &t3);
     G2P();
-    clock_gettime(CLOCK_REALTIME, &t4);
+    //clock_gettime(CLOCK_REALTIME, &t4);
     /*
     printf("Total: %.3f\nP2G: %.3f\tUpdate: %.3f\tG2P: %.3f\n",
             get_ms(t4) - get_ms(t1),
@@ -326,10 +334,12 @@ void Update(void)
             get_ms(t4) - get_ms(t3)
     );
     */
+    /*
     totalTime += get_ms(t4) - get_ms(t1);
     avgP2G += get_ms(t2) - get_ms(t1);
     avgGrid += get_ms(t3) - get_ms(t2);
     avgG2P += get_ms(t4) - get_ms(t3);
+    */
     glutPostRedisplay();
 }
 
@@ -394,6 +404,7 @@ void Keyboard(unsigned char c, __attribute__((unused)) int x, __attribute__((unu
 
 int main(int argc, char** argv)
 {
+    /*
     printf("Original cores: %d\tOriginal max threads: %d\n",
         NCORES, MAX_NTHREADS
     );
@@ -408,16 +419,18 @@ int main(int argc, char** argv)
     // Eigen
     Eigen::initParallel();
     Eigen::setNbThreads(NCORES);
+    */
 
     glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     glutInit(&argc, argv);
     glutCreateWindow("MPM");
-    //glutDisplayFunc(Render);
-    //glutIdleFunc(Update);
+    glutDisplayFunc(Render);
+    glutIdleFunc(Update);
     //glutKeyboardFunc(Keyboard);
 
     InitGL();
     InitMPM();
+    /*
     for (int i = 0; i < iterations; i++) {
         Update();
         if (i % 10 == 0) {
@@ -425,10 +438,10 @@ int main(int argc, char** argv)
             SaveFrame(i / 10);
         }
         printf("Iteration: %d\n", i);
-    }
+    }*/
     //printf("Benchmark over %d iterations\n", iterations);
     //printf("Total time: %.3f\nAverage time per iteration: %.3f\nAverage time for P2G: %.3f\nAverage time for grid update: %.3f\nAverage time for G2P: %.3f\n",
         //totalTime, totalTime / iterations, avgP2G / iterations, avgGrid / iterations, avgG2P / iterations);
-    //glutMainLoop();
+    glutMainLoop();
     return 0;
 }
