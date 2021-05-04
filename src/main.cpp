@@ -22,10 +22,6 @@ using namespace Eigen;
 
 #include "cudaMPM.h"
 
-// Render params
-const static int WINDOW_WIDTH = 800;
-const static int WINDOW_HEIGHT = 600;
-
 // Image output params
 static int frame = 0;	// current image
 static int step = 0;	// current simulation step
@@ -46,12 +42,10 @@ double get_ms(struct timespec t) {
 
 void Update(void)
 {
-        bool debug = false;
-        if (step % 200 == 0) {
-                debug = true;
+        if (step % 100 == 0) {
                 cout << "Step: " << step << endl;
         }
-	solver->Update(debug);
+	solver->Update();
 	step++;
 	glutPostRedisplay();
 }
@@ -110,7 +104,6 @@ void Keyboard(unsigned char c, __attribute__((unused)) int x, __attribute__((unu
 
 int main(int argc, char** argv)
 {
-        /*
 	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
 	glutInit(&argc, argv);
 	glutCreateWindow("MPM");
@@ -122,14 +115,6 @@ int main(int argc, char** argv)
 	InitMPM();
 
 	glutMainLoop();
-        */
-
-	solver = new cudaMPM();
-	solver->setup();
-	solver->Update(true);
-	solver->Update(true);
-	solver->Update(true);
-	solver->Update(true);
 
 	return 0;
 }

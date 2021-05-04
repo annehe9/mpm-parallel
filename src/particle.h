@@ -23,7 +23,7 @@ using namespace Eigen;
 // https://lucasschuermann.com/writing/implementing-sph-in-2d for visualization
 
 // Granularity
-#define BLOCK_PARTICLES 10		// number of particles added in a block
+#define BLOCK_PARTICLES 1000		// number of particles added in a block
 #define GRID_RES 80
 #define TRUE_GRID_RES ((GRID_RES) - 2)
 #define NUM_CELLS ((GRID_RES) * (GRID_RES))	// number of cells in the grid
@@ -31,6 +31,13 @@ using namespace Eigen;
 #define DT 0.00001			// integration timestep
 #define DX (1.0 / (GRID_RES))
 #define INV_DX (1.0 / (DX))
+
+// Render params
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 800
+//#define MAX_PARTICLES_PER_CELL (((WINDOW_WIDTH) / (GRID_RES)) * ((WINDOW_HEIGHT) / (GRID_RES)))
+// based on observations
+#define MAX_PARTICLES_PER_CELL 15
 
 #define GRID_BLOCK_SIDE (((TRUE_GRID_RES) + (OFFSIDE) - 1) / (OFFSIDE))
 
@@ -50,7 +57,9 @@ struct Particle
 {
         Particle(double _x, double _y) : F(Matrix2d::Identity()), C(Matrix2d::Zero()), x(_x, _y), v(0.0, 0.0), Jp(1.0) {}
         Matrix2d F, C; //deformation gradient, APIC momentum
+        Matrix2d U, V, S; // associated with F's SVD computation
         Vector2d x, v; //position and velocity
+        Vector3d grid_update[9];
         double Jp; //determinant of deformation gradient, which is volume
-        double _padding; // extra for padding to resolve sizeof issues (so it appears as 112)
+        double _padding[8]; // extra for padding to resolve sizeof issues, size is now 60 doubles
 };

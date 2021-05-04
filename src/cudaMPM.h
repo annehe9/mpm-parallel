@@ -10,12 +10,16 @@ public:
 
 	Particle *particles;
 	Vector3d *grid;
+        int *assignment;
 
 	Particle *cudaDeviceParticles;
 	Vector3d *cudaDeviceGrid;
+        int *cudaDeviceAssignment;
 
 	cudaMPM();
 	void setup();
 	void addParticles(double xcenter, double ycenter);
-	void Update(bool debug);
+        void CPU_SVD_P2G();
+        void CPU_SVD_G2P();
+	void Update();
 };
