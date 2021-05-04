@@ -25,6 +25,8 @@ struct SVDResults {
         Matrix2d singularValues;
 };
 
+bool equal_mat(Matrix2d A, Matrix2d B, double eps);
+void print_compare(Matrix2d M, Matrix2d A, Matrix2d B);
 double determinant(Matrix2d M);
 void SolveNull(Matrix2d M, NullResults *R);
 void SolveEigen(Matrix2d M, EigenResults *R);

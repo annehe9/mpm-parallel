@@ -26,6 +26,8 @@ using namespace Eigen;
 #define M_PI 3.14159265358979323846
 #endif
 
+#define EPSILON (0.00000000001)
+
 // References:
 // https://github.com/yuanming-hu/taichi_mpm/blob/master/mls-mpm88-explained.cpp
 // https://lucasschuermann.com/writing/implementing-sph-in-2d for visualization
@@ -61,9 +63,11 @@ const static double DX = 1.0 / GRID_RES;
 const static double INV_DX = 1.0 / DX;
 
 // Data structures
-static vector<Particle> particles;
+static vector<Particle> particles1;
+static vector<Particle> particles2;
 // Vector3: [velocity_x, velocity_y, mass]
-static Vector3d grid[GRID_RES + 1][GRID_RES + 1];
+static Vector3d grid1[GRID_RES + 1][GRID_RES + 1];
+static Vector3d grid2[GRID_RES + 1][GRID_RES + 1];
 //static Cell grid[GRID_RES][GRID_RES];
 
 // Simulation params
@@ -94,7 +98,9 @@ const static int INV_FPS = (1.0 / DT) / FPS;
 void addParticles(double xcenter, double ycenter)
 {
 	for (int i = 0; i < BLOCK_PARTICLES; i++) {
-		particles.push_back(Particle((((double)rand() / (double)RAND_MAX) * 2 - 1) * 0.08 + xcenter, (((double)rand() / (double)RAND_MAX) * 2 - 1) * 0.08 + ycenter));
+                Particle p = Particle((((double)rand() / (double)RAND_MAX) * 2 - 1) * 0.08 + xcenter, (((double)rand() / (double)RAND_MAX) * 2 - 1) * 0.08 + ycenter);
+		particles1.push_back(p);
+		particles2.push_back(p);
 	}
 	NUM_PARTICLES += BLOCK_PARTICLES;
 }
@@ -107,10 +113,12 @@ void InitMPM(void)
 	addParticles(0.55, 0.85);
 }
 
-void P2G(void)
+void P2G(bool orig, vector<Particle> &particles, Vector3d grid[GRID_RES+1][GRID_RES+1])
 {
 	memset(grid, 0, sizeof(grid));
+        int count = -1;
 	for (Particle& p : particles) {
+                count += 1;
 		Vector2i base_coord = (p.x * INV_DX - Vector2d(0.5, 0.5)).cast<int>();
 		Vector2d fx = p.x * INV_DX - base_coord.cast<double>();
 
@@ -139,34 +147,74 @@ void P2G(void)
                 assert(J == determinant(p.F)); // TODO
 
 		// Polar decomposition for fixed corotated model, https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf paragraph after Eqn. 45
-		JacobiSVD<Matrix2d> svd(p.F, ComputeFullU | ComputeFullV);
-		Matrix2d r = svd.matrixU() * svd.matrixV().transpose();
-		//Matrix2d s = svd.matrixV() * svd.singularValues().asDiagonal() * svd.matrixV().transpose();
-                SVDResults *R = (SVDResults *) malloc(sizeof(SVDResults));
-                SolveJacobiSVD(p.F, R);
+                Matrix2d r;
+                if (!orig) {
+                        JacobiSVD<Matrix2d> svd(p.F, ComputeFullU | ComputeFullV);
+                        r = svd.matrixU() * svd.matrixV().transpose();
+                        //Matrix2d s = svd.matrixV() * svd.singularValues().asDiagonal() * svd.matrixV().transpose();
+                }
+                else {
+                        SVDResults *R = (SVDResults *) malloc(sizeof(SVDResults));
+                        SolveJacobiSVD(p.F, R);
 
-                Matrix2d U = svd.matrixU();
+                        Matrix2d U = R->U;
+                        Matrix2d V = R->V;
+                        Matrix2d Sig = R->singularValues;
+                        r = U * V.transpose();
+                }
+
+                /*
+                if (step >= 5872) {
+                        cout << count << " " << equal_mat(p.F, Matrix2d::Identity(), 0) 
+                                << " " << p.F.isApprox(Matrix2d::Identity())<< endl;
+                        print_compare(p.F, U, svd.matrixU());
+                        cout << "\n";
+                        print_compare(p.F, V, svd.matrixV());
+                        cout << "\n";
+                        print_compare(p.F, Sig, Matrix2d(svd.singularValues().asDiagonal()));
+                        cout << "\n";
+                        cout << "r" << r << "\n" << r_old << "\n" << endl;
+                }
+                */
+
+                /*
+                if (!equal_mat(U, svd.matrixU(), EPSILON)) {
+                        printf("U doesn't match (in, ours, eigen)\n");
+                        print_compare(p.F, U, svd.matrixU());
+                        exit(-1);
+                }
+                if (!equal_mat(V, svd.matrixV(), EPSILON)) {
+                        printf("V doesn't match (in, ours, eigen)\n");
+                        print_compare(p.F, V, svd.matrixV());
+                        exit(-1);
+                }
+                if (!equal_mat(Sig, Matrix2d(svd.singularValues().asDiagonal()), EPSILON)) {
+                        printf("S doesn't match (in, ours, eigen)\n");
+                        print_compare(p.F, Sig, Matrix2d(svd.singularValues().asDiagonal()));
+                        exit(-1);
+                }
+                */
+
+                /*
                 if ((U(0, 0) == 1 && U(0, 1) == 0 && U(1, 0) && U(1, 1) == 1)) {
                         cout << "U" << endl;
                         cout << U << endl;
                         cout << R->U << endl;
                         cout << "\n" << endl;
                 }
-                Matrix2d V = svd.matrixV();
                 if ((V(0, 0) == 1 && V(0, 1) == 0 && V(1, 0) && V(1, 1) == 1)) {
                         cout << "V" << endl;
                         cout << V << endl;
                         cout << R->V << endl;
                         cout << "\n" << endl;
                 }
-                Matrix2d Sig = Matrix2d(svd.singularValues().asDiagonal());
                 if ((V(0, 0) == 1 && V(0, 1) == 0 && V(1, 0) && V(1, 1) == 1)) {
                         cout << "Sigma" << endl;
                         cout << Sig << endl;
                         cout << R->singularValues << endl;
                         cout << "\n" << endl;
                 }
-		//assert(r.isApprox(R->U * R->V.transpose())); // TODO
+                */
 
 		// [https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf Paragraph after Eqn. 176]
 		double Dinv = 4 * INV_DX * INV_DX;
@@ -193,15 +241,16 @@ void P2G(void)
 				// Translational momentum
 				Vector3d mass_x_velocity(p.v.x() * MASS, p.v.y() * MASS, MASS);
 				Vector2d tmp = affine * dpos;
-				grid[base_coord.x() + i][base_coord.y() + j] += (
-					w[i].x() * w[j].y() * (mass_x_velocity + Vector3d(tmp.x(), tmp.y(), 0))
-					);
+                                Vector3d a = w[i].x() * w[j].y() 
+                                        * (mass_x_velocity 
+                                        + Vector3d(tmp.x(), tmp.y(), 0));
+				grid[base_coord.x() + i][base_coord.y() + j] += a;
 			}
 		}
 	}
 }
 
-void UpdateGridVelocity(void) {
+void UpdateGridVelocity(Vector3d grid[GRID_RES+1][GRID_RES+1]) {
 	// For all grid nodes
 	for (int i = 0; i <= GRID_RES; i++) {
 		for (int j = 0; j <= GRID_RES; j++) {
@@ -232,7 +281,7 @@ void UpdateGridVelocity(void) {
 	}
 }
 
-void G2P(void)
+void G2P(bool orig, vector<Particle> &particles, Vector3d grid[GRID_RES+1][GRID_RES+1])
 {
 	for (Particle& p : particles) {
 		// element-wise floor
@@ -282,40 +331,45 @@ void G2P(void)
 		// MLS-MPM F-update eqn 17
 		Matrix2d F = (Matrix2d::Identity() + DT * p.C) * p.F;
 
-		JacobiSVD<Matrix2d> svd(F, ComputeFullU | ComputeFullV);
-		Matrix2d svd_u = svd.matrixU();
-		Matrix2d svd_v = svd.matrixV();
-		// Snow Plasticity
-		Vector2d sigvalues = svd.singularValues().array().min(1.0f + 7.5e-3).max(1.0 - 2.5e-2);
-		Matrix2d sig = sigvalues.asDiagonal();
+                Matrix2d svd_u, svd_v, sig;
+                if (!orig) {
+                        JacobiSVD<Matrix2d> svd(F, ComputeFullU | ComputeFullV);
+                        svd_u = svd.matrixU();
+                        svd_v = svd.matrixV();
+                        // Snow Plasticity
+                        Vector2d sigvalues = svd.singularValues().array().min(1.0f + 7.5e-3).max(1.0 - 2.5e-2);
+                        sig = sigvalues.asDiagonal();
+                }
+                else {
+                        SVDResults *R = (SVDResults *) malloc(sizeof(SVDResults));
+                        SolveJacobiSVD(F, R);
+                        svd_u = R->U;
+                        svd_v = R->V;
+                        sig = R->singularValues;
+                }
 
-                SVDResults *R = (SVDResults *) malloc(sizeof(SVDResults));
-		SolveJacobiSVD(F, R);
+                //cout << F << "\n" << U << "\n" << V << "\n" << Sig << "\n" << endl;
 
-                Matrix2d U = svd.matrixU();
+                /*
                 if ((U(0, 0) == 1 && U(0, 1) == 0 && U(1, 0) && U(1, 1) == 1)) {
                         cout << "U" << endl;
                         cout << U << endl;
                         cout << R->U << endl;
                         cout << "\n" << endl;
                 }
-                Matrix2d V = svd.matrixV();
                 if ((V(0, 0) == 1 && V(0, 1) == 0 && V(1, 0) && V(1, 1) == 1)) {
                         cout << "V" << endl;
                         cout << V << endl;
                         cout << R->V << endl;
                         cout << "\n" << endl;
                 }
-                Matrix2d Sig = Matrix2d(svd.singularValues().asDiagonal());
                 if ((V(0, 0) == 1 && V(0, 1) == 0 && V(1, 0) && V(1, 1) == 1)) {
                         cout << "Sigma" << endl;
                         cout << Sig << endl;
                         cout << R->singularValues << endl;
                         cout << "\n" << endl;
                 }
-		//assert(svd_u.isApprox(R->U)); // TODO
-		//assert(svd_v.isApprox(R->V)); // TODO
-                //assert(sig.isApprox(R->singularValues)); // TODO
+                */
 
 		double oldJ = F.determinant();
                 assert(oldJ == determinant(F)); // TODO
@@ -331,9 +385,60 @@ void G2P(void)
 
 void Update(void)
 {
-	P2G();
-	UpdateGridVelocity();
-	G2P();
+        //if (step % 100 == 0) {
+                cout << "Step: " << step << endl;
+        //}
+        
+        cout << "orig" << endl;
+	P2G(true, particles1, grid1);
+	UpdateGridVelocity(grid1);
+	G2P(true, particles1, grid1);
+
+        cout << "eigen" << endl;
+	P2G(false, particles2, grid2);
+	UpdateGridVelocity(grid2);
+	G2P(false, particles2, grid2);
+
+        cout << "velocity: " << particles1[0].v(0) << " " << particles1[0].v(1) << endl;
+
+        IOFormat HeavyFmt(FullPrecision, 0, ", ", ";\n", "[", "]", "[", "]");
+        for (int i = 0; i < NUM_PARTICLES; i++) {
+                Particle a = particles1[i];
+                Particle b = particles2[i];
+                if (!a.x.isApprox(b.x) || !a.v.isApprox(b.v) ||
+                                !a.F.isApprox(b.F) || !a.C.isApprox(b.C)) {
+                        printf("(%d)\n", i);
+                        printf("x\n");
+                        cout << a.x.format(HeavyFmt) << endl;
+                        cout << b.x.format(HeavyFmt) << endl;
+                        printf("v\n");
+                        cout << a.v.format(HeavyFmt) << endl;
+                        cout << b.v.format(HeavyFmt) << endl;
+                        printf("F\n");
+                        cout << a.F.format(HeavyFmt) << endl;
+                        cout << b.F.format(HeavyFmt) << endl;
+                        printf("C\n");
+                        cout << a.C.format(HeavyFmt) << endl;
+                        cout << b.C.format(HeavyFmt) << endl;
+                        printf("Jp\n");
+                        cout << a.Jp << endl;
+                        cout << b.Jp << endl;
+                        exit(-1);
+                }
+        }
+        for (int i = 0; i < GRID_RES; i++) {
+                for (int j = 0; j < GRID_RES; j++) {
+                        Vector3d a = grid1[i][j];
+                        Vector3d b = grid1[i][j];
+                        if (!a.isApprox(b)) {
+                                printf("(%d, %d)\n", i, j);
+                                cout << a.format(HeavyFmt) << endl;
+                                cout << b.format(HeavyFmt) << endl;
+                                exit(-1);
+                        }
+                }
+        }
+
 	step++;
 	glutPostRedisplay();
 }
@@ -358,7 +463,7 @@ void Render(void)
 
 	glColor4f(0.2f, 0.6f, 1.0f, 1);
 	glBegin(GL_POINTS);
-	for (auto& p : particles)
+	for (auto& p : particles1)
 		glVertex2f(p.x(0) * WINDOW_WIDTH, p.x(1) * WINDOW_HEIGHT);
 	glEnd();
 
@@ -381,7 +486,7 @@ void Keyboard(unsigned char c, __attribute__((unused)) int x, __attribute__((unu
 	switch (c)
 	{
 	case ' ':
-		if (particles.size() >= MAX_PARTICLES)
+		if (particles1.size() >= MAX_PARTICLES)
 			std::cout << "maximum number of particles reached" << std::endl;
 		else
 		{
@@ -390,7 +495,7 @@ void Keyboard(unsigned char c, __attribute__((unused)) int x, __attribute__((unu
 		break;
 	case 'r':
 	case 'R':
-		particles.clear();
+		particles1.clear();
 		InitMPM();
 		break;
 	}
@@ -407,6 +512,7 @@ int main(int argc, char** argv)
 
 	InitGL();
 	InitMPM();
+        cout << "done with setup" << endl;
 
 	glutMainLoop();
 	return 0;
