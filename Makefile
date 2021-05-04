@@ -18,7 +18,6 @@ OPENGL_LIBS       = -lglut -lGL -lX11
 #######################################################################################################
 
 TARGET = mpm
-TEST_TARGET = test
 CC = g++
 LD = g++
 OBJDIR = obj
@@ -27,8 +26,7 @@ CFLAGS = -std=c++11 -O3 -Wall -Wno-deprecated -pedantic -Wno-vla-extension $(INC
 LFLAGS = -std=c++11 -O3 -Wall -Wno-deprecated -Werror -pedantic $(LIBRARY_PATH) -DNDEBUG
 LIBS = $(OPENGL_LIBS)
 
-OBJS = $(OBJDIR)/main.o $(OBJDIR)/helper.o
-TEST_OBJS = $(OBJDIR)/test.o $(OBJDIR)/helper.o
+OBJS = $(OBJDIR)/main.o
 
 default: $(TARGET)
 
@@ -36,10 +34,6 @@ all: clean $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(LD) $(LFLAGS) $(OBJS) $(LIBS) -o $(TARGET)
-
-$(OBJDIR)/helper.o: $(SRCDIR)/helper.cpp
-	mkdir -p $(OBJDIR)
-	$(CC) $(CFLAGS) -c $(SRCDIR)/helper.cpp -o $(OBJDIR)/helper.o
 
 $(OBJDIR)/main.o: $(SRCDIR)/main.cpp
 	mkdir -p $(OBJDIR)
@@ -49,8 +43,3 @@ clean:
 	rm -f $(OBJS)
 	rm -f $(TARGET)
 	rm -f $(TARGET).exe
-
-test: 
-	$(CC) $(CFLAGS) -c $(SRCDIR)/test.cpp -o $(OBJDIR)/test.o
-	$(LD) $(LFLAGS) $(TEST_OBJS) $(LIBS) -o $(TEST_TARGET)
-	./test
