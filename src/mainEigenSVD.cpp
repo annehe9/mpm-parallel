@@ -424,13 +424,12 @@ int main(int argc, char** argv)
     glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     glutInit(&argc, argv);
     glutCreateWindow("MPM");
-    glutDisplayFunc(Render);
-    glutIdleFunc(Update);
+    //glutDisplayFunc(Render);
+    //glutIdleFunc(Update);
     //glutKeyboardFunc(Keyboard);
 
     InitGL();
     InitMPM();
-    /*
     for (int i = 0; i < iterations; i++) {
         Update();
         if (i % 10 == 0) {
@@ -438,10 +437,10 @@ int main(int argc, char** argv)
             SaveFrame(i / 10);
         }
         printf("Iteration: %d\n", i);
-    }*/
+    }
     //printf("Benchmark over %d iterations\n", iterations);
     //printf("Total time: %.3f\nAverage time per iteration: %.3f\nAverage time for P2G: %.3f\nAverage time for grid update: %.3f\nAverage time for G2P: %.3f\n",
         //totalTime, totalTime / iterations, avgP2G / iterations, avgGrid / iterations, avgG2P / iterations);
-    glutMainLoop();
+    //glutMainLoop();
     return 0;
 }
