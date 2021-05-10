@@ -47,11 +47,13 @@ struct Cell
 };
 */
 
+// Work Load
+const static int BLOCK_PARTICLES = 1000;		        // number of particles added in a block
+const static int GRID_RES = 60;				// grid dim of one side
+
 // Granularity
-const static int MAX_PARTICLES = 25000;
-const static int BLOCK_PARTICLES = 1000;		// number of particles added in a block
 int NUM_PARTICLES = 0;					// keeps track of current number of particles
-const static int GRID_RES = 80;				// grid dim of one side
+const static int MAX_PARTICLES = 25000;
 const static int NUM_CELLS = GRID_RES * GRID_RES;	// number of cells in the grid
 const static double DT = 0.00001;			// integration timestep
 const static double DX = 1.0 / GRID_RES;
@@ -118,7 +120,8 @@ void addParticles(double xcenter, double ycenter)
 
 void InitMPM(void)
 {
-	cout << "initializing mpm with " << BLOCK_PARTICLES << " particles" << endl;
+        cout << BLOCK_PARTICLES << " particles/block" << endl;
+        cout << GRID_RES << " grid resolution" << endl;
 	addParticles(0.55, 0.45);
 	addParticles(0.45, 0.65);
 	addParticles(0.55, 0.85);
@@ -302,14 +305,30 @@ void G2P(void)
 	}
 }
 
+double get_ms(struct timespec t) {
+                return t.tv_sec * 1000.0 + t.tv_nsec / 1000000.0;
+}
+
 void Update(void)
 {
+        struct timespec t1, t2, t3, t4;
+        clock_gettime(CLOCK_REALTIME, &t1);
 	P2G();
+        clock_gettime(CLOCK_REALTIME, &t2);
 	UpdateGridVelocity();
+        clock_gettime(CLOCK_REALTIME, &t3);
 	G2P();
+        clock_gettime(CLOCK_REALTIME, &t4);
+        printf("%d\t%.3f\t%.3f\t%.3f\t%.3f\n",
+                step,                    // iteration
+                get_ms(t2) - get_ms(t1), // P2G
+                get_ms(t3) - get_ms(t2), // UGV
+                get_ms(t4) - get_ms(t3), // G2P
+                get_ms(t4) - get_ms(t1)  // Total
+        );
 	step++;
 
-	glutPostRedisplay();
+	//glutPostRedisplay();
 }
 
 
@@ -372,6 +391,7 @@ void Keyboard(unsigned char c, __attribute__((unused)) int x, __attribute__((unu
 
 int main(int argc, char** argv)
 {
+        /*
 	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
 	glutInit(&argc, argv);
 	glutCreateWindow("MPM");
@@ -383,6 +403,13 @@ int main(int argc, char** argv)
 	InitMPM();
 
 	glutMainLoop();
+        */
+
+	InitMPM();
+        int ITERATIONS = 20000;
+        for (int i = 0; i < ITERATIONS; i++) {
+                Update();
+        }
 
 	return 0;
 }
