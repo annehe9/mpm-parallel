@@ -36,15 +36,8 @@ void InitMPM(void)
 	solver->setup();
 }
 
-double get_ms(struct timespec t) {
-        return t.tv_sec * 1000.0 + t.tv_nsec / 1000000.0;
-}
-
 void Update(void)
 {
-        if (step % 100 == 0) {
-                cout << "Step: " << step << endl;
-        }
 	solver->Update();
 	step++;
 	glutPostRedisplay();
@@ -104,6 +97,7 @@ void Keyboard(unsigned char c, __attribute__((unused)) int x, __attribute__((unu
 
 int main(int argc, char** argv)
 {
+        /*
 	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
 	glutInit(&argc, argv);
 	glutCreateWindow("MPM");
@@ -115,6 +109,13 @@ int main(int argc, char** argv)
 	InitMPM();
 
 	glutMainLoop();
+        */
+	solver = new cudaMPM();
+	solver->setup();
+        int ITERATIONS = 20000;
+        for (int i=0; i < ITERATIONS; i++) {
+                solver->Update();
+        }
 
 	return 0;
 }

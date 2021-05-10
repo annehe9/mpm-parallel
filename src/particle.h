@@ -24,7 +24,7 @@ using namespace Eigen;
 
 // Granularity
 #define BLOCK_PARTICLES 1000		// number of particles added in a block
-#define GRID_RES 80
+#define GRID_RES 40
 #define TRUE_GRID_RES ((GRID_RES) - 2)
 #define NUM_CELLS ((GRID_RES) * (GRID_RES))	// number of cells in the grid
 #define NUM_TRUE_CELLS ((TRUE_GRID_RES) * (TRUE_GRID_RES))

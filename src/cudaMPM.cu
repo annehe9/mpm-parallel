@@ -297,16 +297,24 @@ void cudaMPM::CPU_SVD_P2G() {
         }
 }
 
+double get_ms(struct timespec t) {
+        return t.tv_sec * 1000.0 + t.tv_nsec / 1000000.0;
+}
+
 // CPU
 void cudaMPM::Update()
 {
+
+        struct timespec t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12;
+
+        clock_gettime(CLOCK_REALTIME, &t1);
         // zero-out cuda grid
         cudaMemset(
                 cudaDeviceGrid, 
                 0, 
                 sizeof(Vector3d) * NUM_CELLS
         );
-
+        clock_gettime(CLOCK_REALTIME, &t2);
         // identify which grid cell each particle goes into
         memset(
                 assignment,
@@ -325,7 +333,7 @@ void cudaMPM::Update()
                 // save particle index
                 assignment[(x * GRID_RES + y) * MAX_PARTICLES_PER_CELL + count] = i;
         }
-
+        clock_gettime(CLOCK_REALTIME, &t3);
         // copy assignment data to GPU
         cudaMemcpy(
                 (void*)cudaDeviceAssignment,
@@ -333,10 +341,10 @@ void cudaMPM::Update()
                 sizeof(int) * NUM_CELLS * MAX_PARTICLES_PER_CELL, 
                 cudaMemcpyHostToDevice
         );
-
+        clock_gettime(CLOCK_REALTIME, &t4);
         // perform SVD over particles on CPU
         CPU_SVD_P2G();
-
+        clock_gettime(CLOCK_REALTIME, &t5);
         // copy particle data to GPU
         cudaMemcpy(
                 (void*)cudaDeviceParticles,
@@ -344,7 +352,7 @@ void cudaMPM::Update()
                 sizeof(Particle) * NUM_PARTICLES, 
                 cudaMemcpyHostToDevice
         );
-
+        clock_gettime(CLOCK_REALTIME, &t6);
         // parallelization over particles
         dim3 blockDim(BLOCKSIZE, 1);
         dim3 gridDim(
@@ -352,7 +360,7 @@ void cudaMPM::Update()
         );
         P2G<<<gridDim, blockDim>>>();
         cudaDeviceSynchronize();
-
+        clock_gettime(CLOCK_REALTIME, &t7);
         // parallelization over grid
         blockDim.x = BLOCKSIDE;
         blockDim.y = BLOCKSIDE;
@@ -360,10 +368,10 @@ void cudaMPM::Update()
         gridDim.y = (GRID_RES + blockDim.y - 1) / blockDim.y;
         P2GGrid<<<gridDim, blockDim>>>();
         cudaDeviceSynchronize();
-
+        clock_gettime(CLOCK_REALTIME, &t8);
         UpdateGridVelocity<<<gridDim, blockDim>>>();
         cudaDeviceSynchronize();
-
+        clock_gettime(CLOCK_REALTIME, &t9);
         // parallelization over particles
         blockDim.x = BLOCKSIZE;
         blockDim.y = 1;
@@ -371,7 +379,7 @@ void cudaMPM::Update()
         gridDim.y = 1;
         G2P<<<gridDim, blockDim>>>();
         cudaDeviceSynchronize();
-
+        clock_gettime(CLOCK_REALTIME, &t10);
         // copy particle data back to CPU
         cudaError_t err = cudaMemcpy(
                 (void*)particles,
@@ -379,10 +387,25 @@ void cudaMPM::Update()
                 sizeof(Particle) * NUM_PARTICLES, 
                 cudaMemcpyDeviceToHost
         );
-
+        clock_gettime(CLOCK_REALTIME, &t11);
         // perform SVD on particles
         CPU_SVD_G2P();
-
+        clock_gettime(CLOCK_REALTIME, &t12);
+        printf("%d\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\n",
+                step,                           // iteration
+                get_ms(t2) - get_ms(t1),        // zero
+                get_ms(t3) - get_ms(t2),        // assign
+                get_ms(t4) - get_ms(t3),        // copy assign
+                get_ms(t5) - get_ms(t4),        // P2G SVD
+                get_ms(t6) - get_ms(t5),        // copy particle
+                get_ms(t7) - get_ms(t6),        // P2G1
+                get_ms(t8) - get_ms(t7),        // P2G2
+                get_ms(t9) - get_ms(t8),        // UGV
+                get_ms(t10) - get_ms(t9),       // G2P
+                get_ms(t11) - get_ms(t10),      // copy particle
+                get_ms(t12) - get_ms(t11),      // G2P SVD
+                get_ms(t12) - get_ms(t1)       // total
+        );
         step++;
 }
 
@@ -403,7 +426,8 @@ void cudaMPM::setup(void)
 	addParticles(0.45, 0.65);
 	addParticles(0.55, 0.85);
 
-	cout << "initializing mpm with " << NUM_PARTICLES << " particles" << endl;
+        cout << BLOCK_PARTICLES << " particles/block" << endl;
+        cout << GRID_RES << " grid resolution" << endl;
 
         // GPU memory
 	cudaMalloc(
