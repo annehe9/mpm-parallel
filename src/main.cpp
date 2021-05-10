@@ -48,8 +48,8 @@ struct Cell
 */
 
 // Work Load
-const static int BLOCK_PARTICLES = 1000;		        // number of particles added in a block
-const static int GRID_RES = 60;				// grid dim of one side
+const static int BLOCK_PARTICLES = 500;		        // number of particles added in a block
+const static int GRID_RES = 40;				// grid dim of one side
 
 // Granularity
 int NUM_PARTICLES = 0;					// keeps track of current number of particles
