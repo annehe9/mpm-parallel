@@ -16,8 +16,8 @@ using namespace std;
 #include <eigen3/Eigen/Dense>
 using namespace Eigen;
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+//#define STB_IMAGE_WRITE_IMPLEMENTATION
+//#include "stb_image_write.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -46,14 +46,14 @@ struct Particle
 
 // Granularity
 const static int MAX_PARTICLES = 2500;
-const static int BLOCK_PARTICLES = 500;		// number of particles added in a block
+const static int BLOCK_PARTICLES = 2000;		// number of particles added in a block
 int NUM_PARTICLES = 0;					// keeps track of current number of particles
-const static int GRID_RES = 80;				// grid dim of one side
+const static size_t GRID_RES = 40;				// grid dim of one side
 const static int NUM_CELLS = GRID_RES * GRID_RES;	// number of cells in the grid
 const static double DT = 0.00001;			// integration timestep
 const static double DX = 1.0 / GRID_RES;
 const static double INV_DX = 1.0 / DX;
-const static int MAX_PARTICLES_PER_CELL = 15;
+const static int MAX_PARTICLES_PER_CELL = 65;
 //500-40: 20, 500-60: 15, 500-80: 15
 //1000-40: 45, 1000-60: 20, 1000-80: 15
 //2000-40: 65, 2000-60: 35, 2000-80: 25, 2000-100: 20
@@ -62,7 +62,6 @@ const static int MAX_PARTICLES_PER_CELL = 15;
 static vector<Particle> particles;
 // Vector3: [velocity_x, velocity_y, mass]
 static Vector3d grid[GRID_RES][GRID_RES];
-//static Cell grid[GRID_RES][GRID_RES];
 static size_t grididxs[GRID_RES * GRID_RES];
 static size_t num_filled = 0;
 static int assignment[GRID_RES*GRID_RES][MAX_PARTICLES_PER_CELL];
@@ -102,7 +101,7 @@ void addParticles(double xcenter, double ycenter)
 
 void InitMPM(void)
 {
-    cout << "initializing mpm with " << BLOCK_PARTICLES << " particles" << endl;
+    //cout << "initializing mpm with " << BLOCK_PARTICLES << " particles" << endl;
     addParticles(0.55, 0.45);
     addParticles(0.45, 0.65);
     addParticles(0.55, 0.85);
@@ -179,9 +178,6 @@ void P2G_iteration(Particle& p) {
 
 void ResetAssignment(void)
 {
-    memset(grid, 0, sizeof(grid));
-    memset(assignment, -1, sizeof(assignment));
-
     for (int i = 0; i < NUM_PARTICLES; i++) {
         Vector2i base_coord = (particles[i].x * INV_DX - Vector2d(0.5, 0.5)).cast<int>();
         int x = base_coord.x() + 1;
@@ -237,8 +233,8 @@ void P2GGrid_iteration(Vector3d& g, int i, int j) {
 void P2GGrid(void) {
     size_t i, j;
     #pragma omp parallel for collapse(2) private(i, j) //schedule(dynamic)
-    for (i = 0; i < GRID_RES; i++) {
-        for (j = 0; j < GRID_RES; j++) {
+    for (i = 1; i < GRID_RES-1; i++) {
+        for (j = 1; j < GRID_RES-1; j++) {
             Vector3d& g = grid[i][j];
             P2GGrid_iteration(g, i, j);
         }
@@ -251,7 +247,7 @@ void CollectGridIndices(void) {
     for (i = 0; i < GRID_RES; i++) {
         for (j = 0; j < GRID_RES; j++) {
             Vector3d& g = grid[i][j];
-            if (g[2] > 0) {
+	    if (g[2] > 0) {
                 grididxs[num_filled] = (i * GRID_RES + j);
                 num_filled++;
             }
@@ -376,36 +372,38 @@ double get_ms(struct timespec t) {
     return t.tv_sec * 1000.0 + t.tv_nsec / 1000000.0;
 }
 
-void Update(void)
+void Update(int step)
 {
-    struct timespec t0, t1, t2, t3, t4;
+    struct timespec t0, t1, t2, t3, t4, t5, t6;
     clock_gettime(CLOCK_REALTIME, &t0);
-    ResetAssignment();
+    memset(grid, 0, sizeof(grid));
+    memset(assignment, -1, sizeof(assignment));
+    //memset(grididxs, 0, sizeof(grididxs));
     clock_gettime(CLOCK_REALTIME, &t1);
-    P2G();
+    ResetAssignment();
     clock_gettime(CLOCK_REALTIME, &t2);
+    P2G();
+    clock_gettime(CLOCK_REALTIME, &t3);
     P2GGrid();
+    clock_gettime(CLOCK_REALTIME, &t4);
     CollectGridIndices();
     UpdateGridVelocity();
-    clock_gettime(CLOCK_REALTIME, &t3);
+    clock_gettime(CLOCK_REALTIME, &t5);
     G2P();
-    clock_gettime(CLOCK_REALTIME, &t4);
-    /*
-    printf("Total: %.3f\nP2G: %.3f\tUpdate: %.3f\tG2P: %.3f\n",
-            get_ms(t4) - get_ms(t1),
-            get_ms(t2) - get_ms(t1),
-            get_ms(t3) - get_ms(t2),
-            get_ms(t4) - get_ms(t3)
+    clock_gettime(CLOCK_REALTIME, &t6);
+    printf("%d\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\n",
+        step,                           // iteration
+        get_ms(t1) - get_ms(t0),        // zero
+        get_ms(t2) - get_ms(t1),        // assign
+        get_ms(t3) - get_ms(t2),        // P2G1
+        get_ms(t4) - get_ms(t3),        // P2G2
+        get_ms(t5) - get_ms(t4),        // CG+UGV
+        get_ms(t6) - get_ms(t5),        // G2P
+        get_ms(t6) - get_ms(t0)       // total
     );
-    */
-    totalTime += get_ms(t4) - get_ms(t0);
-    avgReset += get_ms(t1) - get_ms(t0);
-    avgP2G += get_ms(t2) - get_ms(t1);
-    avgGrid += get_ms(t3) - get_ms(t2);
-    avgG2P += get_ms(t4) - get_ms(t3);
     //glutPostRedisplay();
 }
-
+/*
 //Rendering
 void InitGL(void)
 {
@@ -444,7 +442,7 @@ void SaveFrame(int frame)
     stbi_write_jpg(filepath.c_str(), WINDOW_WIDTH, WINDOW_HEIGHT, 3, buffer, 100);
     free(buffer);
 }
-
+*/
 /*
 void Keyboard(unsigned char c, __attribute__((unused)) int x, __attribute__((unused)) int y)
 {
@@ -468,41 +466,39 @@ void Keyboard(unsigned char c, __attribute__((unused)) int x, __attribute__((unu
 */
 int main(int argc, char** argv)
 {
-    printf("Original cores: %d\tOriginal max threads: %d\n",
-        NCORES, MAX_NTHREADS
-    );
     // OpenMP
     if (argc < 2) {
         printf("Input # of cores.");
         exit(-1);
     }
     NCORES = atoi(argv[1]);
-    printf("NCORES: %d\tMAX_NTHREADS: %d\n", NCORES, MAX_NTHREADS);
+    //printf("NCORES: %d\tMAX_NTHREADS: %d\n", NCORES, MAX_NTHREADS);
     omp_set_num_threads(NCORES);
     // Eigen
     Eigen::initParallel();
     Eigen::setNbThreads(NCORES);
     
-    glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
-    glutInit(&argc, argv);
-    glutCreateWindow("MPM");
+    //glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+    //glutInit(&argc, argv);
+    //glutCreateWindow("MPM");
     //glutDisplayFunc(Render);
     //glutIdleFunc(Update);
     //glutKeyboardFunc(Keyboard);
 
-    InitGL();
+    //InitGL();
     InitMPM();
     for (int i = 0; i < iterations; i++) {
-        Update();
+        Update(i);
+	/*
         if (i % 100 == 0) {
             Render();
-            SaveFrame(i / 10);
-        }
-        printf("Iteration: %d\n", i);
+            SaveFrame(i / 100);
+        }*/
+        //printf("Iteration: %d\n", i);
     }
     //printf("Benchmark over %d iterations\n", iterations);
-    printf("Total time: %.3f\nAverage time per iteration: %.3f\nAverage time for Reset: %.3f\nAverage time for P2G: %.3f\nAverage time for grid update: %.3f\nAverage time for G2P: %.3f\n",
-        totalTime, totalTime / iterations, avgReset / iterations, avgP2G / iterations, avgGrid / iterations, avgG2P / iterations);
+    //printf("Total time: %.3f\nAverage time per iteration: %.3f\nAverage time for Reset: %.3f\nAverage time for P2G: %.3f\nAverage time for grid update: %.3f\nAverage time for G2P: %.3f\n",
+        //totalTime, totalTime / iterations, avgReset / iterations, avgP2G / iterations, avgGrid / iterations, avgG2P / iterations);
     //glutMainLoop();
     return 0;
 }
