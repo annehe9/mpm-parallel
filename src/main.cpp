@@ -54,6 +54,9 @@ const static double DT = 0.00001;			// integration timestep
 const static double DX = 1.0 / GRID_RES;
 const static double INV_DX = 1.0 / DX;
 const static int MAX_PARTICLES_PER_CELL = 15;
+//500-40: 20, 500-60: 15, 500-80: 15
+//1000-40: 45, 1000-60: 20, 1000-80: 15
+//2000-40: 65, 2000-60: 35, 2000-80: 25, 2000-100: 20
 
 // Data structures
 static vector<Particle> particles;
@@ -436,7 +439,7 @@ void SaveFrame(int frame)
     // save image output
     unsigned char* buffer = (unsigned char*)malloc(WINDOW_WIDTH * WINDOW_HEIGHT * 3);
     glReadPixels(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, buffer);
-    string filepath = "./imgs/mpm" + to_string((long long int)frame) + ".png";
+    string filepath = "./imgs/mpm" + to_string((long long int)frame) + ".jpg";
     stbi_flip_vertically_on_write(true);
     stbi_write_jpg(filepath.c_str(), WINDOW_WIDTH, WINDOW_HEIGHT, 3, buffer, 100);
     free(buffer);
