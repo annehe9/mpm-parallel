@@ -23,7 +23,7 @@ using namespace Eigen;
 // https://lucasschuermann.com/writing/implementing-sph-in-2d for visualization
 
 // Granularity
-#define BLOCK_PARTICLES 500		// number of particles added in a block
+#define BLOCK_PARTICLES 2000		// number of particles added in a block
 #define GRID_RES 40
 #define TRUE_GRID_RES ((GRID_RES) - 2)
 #define NUM_CELLS ((GRID_RES) * (GRID_RES))	// number of cells in the grid
@@ -35,9 +35,15 @@ using namespace Eigen;
 // Render params
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 800
+
 //#define MAX_PARTICLES_PER_CELL (((WINDOW_WIDTH) / (GRID_RES)) * ((WINDOW_HEIGHT) / (GRID_RES)))
 // based on observations
-#define MAX_PARTICLES_PER_CELL 15
+//#define MAX_PARTICLES_PER_CELL 15 /* 500-60, 500-80, 1000-80 */
+//#define MAX_PARTICLES_PER_CELL 20 /* 500-40, 1000-60 */
+//#define MAX_PARTICLES_PER_CELL 25 /* 2000-80 */
+//#define MAX_PARTICLES_PER_CELL 35 /* 2000-60 */
+//#define MAX_PARTICLES_PER_CELL 45 /* 1000-40 */
+#define MAX_PARTICLES_PER_CELL 65 /* 2000-40 */
 
 #define GRID_BLOCK_SIDE (((TRUE_GRID_RES) + (OFFSIDE) - 1) / (OFFSIDE))
 

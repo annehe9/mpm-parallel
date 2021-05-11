@@ -428,6 +428,7 @@ void cudaMPM::setup(void)
 
         cout << BLOCK_PARTICLES << " particles/block" << endl;
         cout << GRID_RES << " grid resolution" << endl;
+        cout << MAX_PARTICLES_PER_CELL << " max particles per cell" << endl;
 
         // GPU memory
 	cudaMalloc(
